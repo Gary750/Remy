@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+// Configuración
 import 'package:remy/config/app_routes.dart';
 import 'package:remy/config/app_theme.dart';
+
+// Vistas de Autenticación
 import 'package:remy/views/auth/login_screen.dart';
 import 'package:remy/views/auth/register_screen.dart';
+
+// Vistas del Profesor / Alumno
 import 'package:remy/views/professor/dashboard_screen.dart';
 import 'package:remy/views/professor/create_class_screen.dart';
 import 'package:remy/views/professor/class_detail_screen.dart';
@@ -10,7 +18,19 @@ import 'package:remy/views/professor/create_assignment_screen.dart';
 import 'package:remy/views/professor/student_recipe_screen.dart';
 import 'package:remy/views/professor/profile_screen.dart';
 
-void main() {
+Future<void> main() async {
+  // Asegura que los bindings de Flutter estén listos antes de inicializar plugins
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 1. Cargar las variables de entorno para mayor seguridad
+  await dotenv.load(fileName: ".env");
+
+  // 2. Inicializar Supabase usando las variables seguras del archivo .env
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
+
   runApp(const MyApp());
 }
 
@@ -26,16 +46,21 @@ class MyApp extends StatelessWidget {
       initialRoute: AppRoutes.login,
       onGenerateRoute: (settings) {
         switch (settings.name) {
+          // Rutas de Autenticación
           case AppRoutes.login:
             return MaterialPageRoute(builder: (_) => const LoginScreen());
           case AppRoutes.register:
             return MaterialPageRoute(builder: (_) => const RegisterScreen());
+            
+          // Rutas Principales
           case AppRoutes.dashboard:
             return MaterialPageRoute(builder: (_) => const DashboardScreen());
           case AppRoutes.createClass:
             return MaterialPageRoute(builder: (_) => const CreateClassScreen());
           case AppRoutes.profile:
             return MaterialPageRoute(builder: (_) => const ProfileScreen());
+            
+          // Rutas con Argumentos
           case AppRoutes.classDetail:
             final args = settings.arguments as String;
             return MaterialPageRoute(
@@ -54,6 +79,8 @@ class MyApp extends StatelessWidget {
                 classId: args['classId'],
               ),
             );
+            
+          // Ruta por defecto (Fallback) en caso de error
           default:
             return MaterialPageRoute(
               builder: (_) => Scaffold(
@@ -67,6 +94,11 @@ class MyApp extends StatelessWidget {
                         'Ruta no encontrada: ${settings.name}',
                         style: const TextStyle(fontSize: 18),
                       ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.login),
+                        child: const Text('Volver al Inicio'),
+                      )
                     ],
                   ),
                 ),

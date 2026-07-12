@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-// import 'package:remy/controllers/auth_controller.dart'; // TODO: Descomentar
+import 'package:remy/controllers/auth_controller.dart';
 import 'package:remy/config/app_routes.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'package:remy/views/shared/widgets/custom_text_field.dart';
@@ -12,8 +12,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  // TODO: Inicializar AuthController
-  // final AuthController authController = AuthController();
+  final AuthController authController = AuthController();
   
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
@@ -23,7 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool obscurePassword = true;
   bool obscureConfirmPassword = true;
   bool isLoading = false;
-  String? selectedRole;
+  String? selectedRole; // Variable para el rol
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +58,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 24),
                     
-                    // Nombre
                     CustomTextField(
                       controller: nameController,
                       label: 'Nombre completo *',
@@ -68,7 +66,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 16),
                     
-                    // Email
                     CustomTextField(
                       controller: emailController,
                       label: 'Correo electrónico *',
@@ -78,17 +75,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 16),
                     
-                    // Rol
+                    // Selector de Rol
                     DropdownButtonFormField<String>(
                       value: selectedRole,
                       decoration: const InputDecoration(
                         labelText: 'Rol *',
-                        prefixIcon: Icon(Icons.badge),
+                        prefixIcon: Icon(Icons.badge, color: Colors.grey),
                         border: OutlineInputBorder(),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'professor', child: Text('Profesor')),
-                        DropdownMenuItem(value: 'student', child: Text('Estudiante')),
+                        DropdownMenuItem(value: 'profesor', child: Text('Profesor')),
+                        DropdownMenuItem(value: 'alumno', child: Text('Alumno')),
                       ],
                       onChanged: (value) {
                         setState(() {
@@ -98,7 +95,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 16),
                     
-                    // Contraseña
                     CustomTextField(
                       controller: passwordController,
                       label: 'Contraseña *',
@@ -116,7 +112,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 16),
                     
-                    // Confirmar contraseña
                     CustomTextField(
                       controller: confirmPasswordController,
                       label: 'Confirmar contraseña *',
@@ -134,7 +129,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 24),
                     
-                    // Register button
                     CustomButton(
                       text: 'Registrarse',
                       onPressed: _register,
@@ -142,7 +136,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 16),
                     
-                    // Login link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -166,7 +159,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _register() async {
-    // Validaciones
+    // 1. Validar campos vacíos incluyendo el rol
     if (nameController.text.isEmpty ||
         emailController.text.isEmpty ||
         passwordController.text.isEmpty ||
@@ -181,6 +174,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    // 2. Validar formato de correo
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(emailController.text.trim())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ingresa un correo electrónico válido'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // 3. Validar contraseñas
     if (passwordController.text != confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -205,14 +211,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       isLoading = true;
     });
 
-    // TODO: Conectar con Supabase
-    /*
     try {
+      // Pasamos el rol seleccionado al controlador
       await authController.register(
         nameController.text,
-        emailController.text,
+        emailController.text.trim(),
         passwordController.text,
-        selectedRole!,
+        selectedRole!, 
       );
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -225,7 +230,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text(e.toString()),
           backgroundColor: Colors.red,
         ),
       );
@@ -234,20 +239,5 @@ class _RegisterScreenState extends State<RegisterScreen> {
         isLoading = false;
       });
     }
-    */
-
-    // Simulación (eliminar después)
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() {
-      isLoading = false;
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('¡Cuenta creada exitosamente!'),
-        backgroundColor: Colors.green,
-      ),
-    );
-    Navigator.pushReplacementNamed(context, AppRoutes.login);
   }
 }

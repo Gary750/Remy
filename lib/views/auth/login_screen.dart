@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-// import 'package:remy/controllers/auth_controller.dart'; // TODO: Descomentar
+import 'package:remy/controllers/auth_controller.dart';
 import 'package:remy/config/app_routes.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'package:remy/views/shared/widgets/custom_text_field.dart';
@@ -12,8 +12,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // TODO: Inicializar AuthController
-  // final AuthController authController = AuthController();
+  final AuthController authController = AuthController();
   
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -35,7 +34,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo
                   Center(
                     child: Container(
                       width: 100,
@@ -71,7 +69,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 32),
                   
-                  // Email
                   CustomTextField(
                     controller: emailController,
                     label: 'Correo electrónico',
@@ -81,7 +78,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // Password
                   CustomTextField(
                     controller: passwordController,
                     label: 'Contraseña',
@@ -97,21 +93,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                     obscureText: obscurePassword,
                   ),
+                  /*TODO : Implementar la funcionalidad de recuperación de contraseña
                   const SizedBox(height: 8),
                   
-                  // Forgot password
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {
-                        // TODO: Implementar recuperación de contraseña
+                        Navigator.pushNamed(context, AppRoutes.forgotPassword);
                       },
                       child: const Text('¿Olvidaste tu contraseña?'),
                     ),
                   ),
+                  */
                   const SizedBox(height: 16),
                   
-                  // Login button
                   CustomButton(
                     text: 'Iniciar Sesión',
                     onPressed: _login,
@@ -119,7 +115,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // Register link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -142,7 +137,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _login() async {
-    // Validación
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -157,31 +151,34 @@ class _LoginScreenState extends State<LoginScreen> {
       isLoading = true;
     });
 
-    // TODO: Conectar con Supabase
-    /*
     try {
-      final user = await authController.login(
-        emailController.text,
+      final response = await authController.login(
+        emailController.text.trim(),
         passwordController.text,
       );
       
-      // Redirigir según el rol
-      if (user.role == 'professor') {
-        Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
-      } else {
-        Navigator.pushReplacementNamed(context, AppRoutes.myClasses);
-      }
+      final role = response['role'];
       
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('¡Bienvenido!'),
+        SnackBar(
+          content: Text('¡Bienvenido! Iniciaste como $role'),
           backgroundColor: Colors.green,
         ),
       );
+
+      // Redirección dinámica basada en el rol
+      if (role == 'profesor') {
+        Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+      } else {
+        // Asegúrate de tener una ruta para el alumno en tu app_routes.dart
+        // Por ahora redirigimos al dashboard general si no existe una vista específica
+        Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+      }
+      
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text(e.toString()),
           backgroundColor: Colors.red,
         ),
       );
@@ -190,15 +187,5 @@ class _LoginScreenState extends State<LoginScreen> {
         isLoading = false;
       });
     }
-    */
-
-    // Simulación (eliminar después)
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() {
-      isLoading = false;
-    });
-    
-    // Por ahora redirige al dashboard del profesor
-    Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
   }
 }
