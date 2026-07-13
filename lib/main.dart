@@ -10,7 +10,7 @@ import 'package:remy/config/app_theme.dart';
 import 'package:remy/views/auth/login_screen.dart';
 import 'package:remy/views/auth/register_screen.dart';
 
-// Vistas del Profesor / Alumno
+// Vistas del Profesor
 import 'package:remy/views/professor/dashboard_screen.dart';
 import 'package:remy/views/professor/create_class_screen.dart';
 import 'package:remy/views/professor/class_detail_screen.dart';
@@ -18,14 +18,18 @@ import 'package:remy/views/professor/create_assignment_screen.dart';
 import 'package:remy/views/professor/student_recipe_screen.dart';
 import 'package:remy/views/professor/profile_screen.dart';
 
-Future<void> main() async {
-  // Asegura que los bindings de Flutter estén listos antes de inicializar plugins
-  WidgetsFlutterBinding.ensureInitialized();
+// Vistas del Alumno
+import 'package:remy/views/student/my_classes_screen.dart';
+import 'package:remy/views/student/student_class_detail_screen.dart';
+import 'package:remy/views/student/upload_recipe_screen.dart';
+import 'package:remy/views/student/my_recipes_screen.dart';
+import 'package:remy/views/student/my_grades_screen.dart';
+import 'package:remy/views/student/search_recipes_screen.dart';
 
-  // 1. Cargar las variables de entorno para mayor seguridad
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
 
-  // 2. Inicializar Supabase usando las variables seguras del archivo .env
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
@@ -46,31 +50,25 @@ class MyApp extends StatelessWidget {
       initialRoute: AppRoutes.login,
       onGenerateRoute: (settings) {
         switch (settings.name) {
-          // Rutas de Autenticación
+          // Autenticación
           case AppRoutes.login:
             return MaterialPageRoute(builder: (_) => const LoginScreen());
           case AppRoutes.register:
             return MaterialPageRoute(builder: (_) => const RegisterScreen());
             
-          // Rutas Principales
+          // Profesor
           case AppRoutes.dashboard:
             return MaterialPageRoute(builder: (_) => const DashboardScreen());
           case AppRoutes.createClass:
             return MaterialPageRoute(builder: (_) => const CreateClassScreen());
           case AppRoutes.profile:
             return MaterialPageRoute(builder: (_) => const ProfileScreen());
-            
-          // Rutas con Argumentos
           case AppRoutes.classDetail:
             final args = settings.arguments as String;
-            return MaterialPageRoute(
-              builder: (_) => ClassDetailScreen(classId: args),
-            );
+            return MaterialPageRoute(builder: (_) => ClassDetailScreen(classId: args));
           case AppRoutes.createAssignment:
             final args = settings.arguments as String;
-            return MaterialPageRoute(
-              builder: (_) => CreateAssignmentScreen(classId: args),
-            );
+            return MaterialPageRoute(builder: (_) => CreateAssignmentScreen(classId: args));
           case AppRoutes.studentRecipe:
             final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(
@@ -79,8 +77,35 @@ class MyApp extends StatelessWidget {
                 classId: args['classId'],
               ),
             );
-            
-          // Ruta por defecto (Fallback) en caso de error
+
+          // Alumno
+          case AppRoutes.studentDashboard:
+            return MaterialPageRoute(builder: (_) => const MyClassesScreen());
+            case AppRoutes.studentClassDetail:
+          final args = settings.arguments as String;
+          return MaterialPageRoute(builder: (_) => StudentClassDetailScreen(classId: args));
+          case AppRoutes.uploadRecipe:
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (_) => UploadRecipeScreen(
+                assignmentId: args['assignmentId'],
+                classId: args['classId'],
+                recipeType: args['recipeType'],
+              ),
+            );
+          case AppRoutes.myRecipes:
+            final args = settings.arguments as Map<String, dynamic>?;
+            return MaterialPageRoute(
+              builder: (_) => MyRecipesScreen(
+                assignmentId: args?['assignmentId'],
+                classId: args?['classId'],
+              ),
+            );
+            case AppRoutes.myGrades:
+              return MaterialPageRoute(builder: (_) => const MyGradesScreen());
+            case AppRoutes.searchRecipes:
+              return MaterialPageRoute(builder: (_) => const SearchRecipesScreen());
+          // Fallback
           default:
             return MaterialPageRoute(
               builder: (_) => Scaffold(
@@ -90,10 +115,7 @@ class MyApp extends StatelessWidget {
                     children: [
                       const Icon(Icons.error_outline, size: 64, color: Colors.red),
                       const SizedBox(height: 16),
-                      Text(
-                        'Ruta no encontrada: ${settings.name}',
-                        style: const TextStyle(fontSize: 18),
-                      ),
+                      Text('Ruta no encontrada: ${settings.name}', style: const TextStyle(fontSize: 18)),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.login),

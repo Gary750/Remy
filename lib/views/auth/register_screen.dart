@@ -13,12 +13,13 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final AuthController authController = AuthController();
-  
+
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
-  
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
+
   bool obscurePassword = true;
   bool obscureConfirmPassword = true;
   bool isLoading = false;
@@ -57,7 +58,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: TextStyle(color: Colors.grey),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     CustomTextField(
                       controller: nameController,
                       label: 'Nombre completo *',
@@ -65,7 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       prefixIcon: Icons.person,
                     ),
                     const SizedBox(height: 16),
-                    
+
                     CustomTextField(
                       controller: emailController,
                       label: 'Correo electrónico *',
@@ -74,8 +75,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       keyboardType: TextInputType.emailAddress,
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Selector de Rol
+                    // Dentro de lib/views/auth/register_screen.dart
                     DropdownButtonFormField<String>(
                       value: selectedRole,
                       decoration: const InputDecoration(
@@ -84,8 +86,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         border: OutlineInputBorder(),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'profesor', child: Text('Profesor')),
-                        DropdownMenuItem(value: 'alumno', child: Text('Alumno')),
+                        // El 'value' es lo que se manda a la base de datos (debe ir en minúsculas)
+                        // El 'child' es el texto que ve el usuario en la pantalla (puede llevar mayúscula)
+                        DropdownMenuItem(
+                          value: 'profesor',
+                          child: Text('Profesor'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'alumno',
+                          child: Text('Alumno'),
+                        ),
                       ],
                       onChanged: (value) {
                         setState(() {
@@ -94,14 +104,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
-                    
+
                     CustomTextField(
                       controller: passwordController,
                       label: 'Contraseña *',
                       hint: 'Mínimo 6 caracteres',
                       prefixIcon: Icons.lock,
-                      suffixIcon: obscurePassword 
-                          ? Icons.visibility 
+                      suffixIcon: obscurePassword
+                          ? Icons.visibility
                           : Icons.visibility_off,
                       onSuffixPressed: () {
                         setState(() {
@@ -111,14 +121,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       obscureText: obscurePassword,
                     ),
                     const SizedBox(height: 16),
-                    
+
                     CustomTextField(
                       controller: confirmPasswordController,
                       label: 'Confirmar contraseña *',
                       hint: 'Repite tu contraseña',
                       prefixIcon: Icons.lock_outline,
-                      suffixIcon: obscureConfirmPassword 
-                          ? Icons.visibility 
+                      suffixIcon: obscureConfirmPassword
+                          ? Icons.visibility
                           : Icons.visibility_off,
                       onSuffixPressed: () {
                         setState(() {
@@ -128,21 +138,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       obscureText: obscureConfirmPassword,
                     ),
                     const SizedBox(height: 24),
-                    
+
                     CustomButton(
                       text: 'Registrarse',
                       onPressed: _register,
                       isLoading: isLoading,
                     ),
                     const SizedBox(height: 16),
-                    
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Text('¿Ya tienes cuenta?'),
                         TextButton(
                           onPressed: () {
-                            Navigator.pushReplacementNamed(context, AppRoutes.login);
+                            Navigator.pushReplacementNamed(
+                              context,
+                              AppRoutes.login,
+                            );
                           },
                           child: const Text('Inicia sesión'),
                         ),
@@ -217,9 +230,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         nameController.text,
         emailController.text.trim(),
         passwordController.text,
-        selectedRole!, 
+        selectedRole!,
       );
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('¡Cuenta creada exitosamente!'),
@@ -229,10 +242,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       Navigator.pushReplacementNamed(context, AppRoutes.login);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
       );
     } finally {
       setState(() {
