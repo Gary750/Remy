@@ -166,13 +166,11 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
 
-      // Redirección dinámica basada en el rol
       if (role == 'profesor') {
         Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
       } else {
-        // Asegúrate de tener una ruta para el alumno en tu app_routes.dart
-        // Por ahora redirigimos al dashboard general si no existe una vista específica
-        Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+        // Redirige al dashboard del alumno
+        Navigator.pushReplacementNamed(context, AppRoutes.studentDashboard);
       }
       
     } catch (e) {
