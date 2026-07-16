@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-// import 'package:remy/controllers/recipe_controller.dart'; // TODO: Descomentar
+import 'package:remy/controllers/recipe_controller.dart';
 import 'package:remy/views/shared/responsive_layout.dart';
 
 class MyRecipesScreen extends StatefulWidget {
@@ -18,89 +18,41 @@ class MyRecipesScreen extends StatefulWidget {
 }
 
 class _MyRecipesScreenState extends State<MyRecipesScreen> {
-  // TODO: Inicializar RecipeController
-  // final RecipeController recipeController = RecipeController();
+  final RecipeController recipeController = RecipeController();
 
-  bool isLoading = false;
+  bool isLoading = true;
   String? selectedRecipeId;
-
-  // Datos de ejemplo -- reflejan la tabla recipes + grades
-  final List<Map<String, dynamic>> mockRecipes = [
-    {
-      'id': 'r1',
-      'assignment_id': 'a1',
-      'name': 'Mole Poblano',
-      'type': 'Comida',
-      'country': 'México',
-      'region': 'Puebla',
-      'cooking_style': 'Hervido',
-      'image_url': null,
-      'mise_en_place': 'Limpiar y desvenar los chiles. Tostar las especias.',
-      'ingredients': [
-        {'name': 'Chile mulato', 'quantity': '5 piezas'},
-        {'name': 'Chile ancho', 'quantity': '4 piezas'},
-        {'name': 'Chocolate de mesa', 'quantity': '1/2 taza'},
-        {'name': 'Pepitas', 'quantity': '1/4 taza'},
-      ],
-      'sauce': null,
-      'procedure':
-          '1. Limpia los chiles.\n2. Fríe brevemente.\n3. Remoja 15 min.\n4. Muele con el resto de ingredientes.\n5. Cocina 30 min a fuego bajo.',
-      'prep_time': '90 min',
-      'portions': '6',
-      'stars': 4,
-    },
-    {
-      'id': 'r2',
-      'assignment_id': 'a4',
-      'name': 'Agua de Jamaica',
-      'type': 'Bebida',
-      'country': 'México',
-      'region': 'Nacional',
-      'cooking_style': 'Hervido',
-      'image_url': null,
-      'mise_en_place': 'Lavar la flor de jamaica.',
-      'ingredients': [
-        {'name': 'Flor de jamaica', 'quantity': '1 taza'},
-        {'name': 'Agua', 'quantity': '4 tazas'},
-        {'name': 'Azúcar', 'quantity': '1/2 taza'},
-      ],
-      'sauce': null,
-      'procedure':
-          '1. Hierve el agua con la jamaica.\n2. Reposa 10 min.\n3. Cuela y endulza.',
-      'prep_time': '20 min',
-      'portions': '4',
-      'stars': null, // Aún sin calificar
-    },
-  ];
+  List<Map<String, dynamic>> recipes = [];
 
   @override
   void initState() {
     super.initState();
-    selectedRecipeId = widget.assignmentId != null
-        ? mockRecipes.firstWhere(
-            (r) => r['assignment_id'] == widget.assignmentId,
-            orElse: () => mockRecipes.isNotEmpty ? mockRecipes.first : {},
-          )['id']
-        : null;
-    // TODO: Cargar recetas reales del alumno
-    // _loadRecipes();
+    _loadRecipes();
   }
 
-  /*
   Future<void> _loadRecipes() async {
     setState(() => isLoading = true);
     try {
-      final recipes = await recipeController.getMyRecipes();
-      setState(() => mockRecipes = recipes);
+      final data = await recipeController.getMyRecipes();
+      setState(() {
+        recipes = data;
+        if (widget.assignmentId != null) {
+          final match = recipes.firstWhere(
+            (r) => r['assignment_id'] == widget.assignmentId,
+            orElse: () => {},
+          );
+          selectedRecipeId = match.isNotEmpty ? match['id'] : null;
+        }
+      });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al cargar recetas: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
       );
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
-  */
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +76,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : mockRecipes.isEmpty
+          : recipes.isEmpty
               ? _buildEmptyState()
               : (showingDetail
                   ? _buildDetail(_findRecipe(selectedRecipeId!))
@@ -133,7 +85,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
   }
 
   Map<String, dynamic> _findRecipe(String id) {
-    return mockRecipes.firstWhere((r) => r['id'] == id);
+    return recipes.firstWhere((r) => r['id'] == id);
   }
 
   Widget _buildList() {
@@ -154,9 +106,9 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
         ),
-        itemCount: mockRecipes.length,
+        itemCount: recipes.length,
         itemBuilder: (context, index) {
-          final recipe = mockRecipes[index];
+          final recipe = recipes[index];
           return _buildRecipeCard(recipe);
         },
       ),
@@ -197,7 +149,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      recipe['name'],
+                      recipe['name'] ?? '',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
@@ -207,7 +159,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${recipe['country']} · ${recipe['type']}',
+                      '${recipe['country'] ?? ''} · ${recipe['type'] ?? ''}',
                       style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                     const SizedBox(height: 6),
@@ -264,8 +216,16 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                         decoration: BoxDecoration(
                           color: Colors.grey[200],
                           borderRadius: BorderRadius.circular(8),
+                          image: recipe['image_url'] != null
+                              ? DecorationImage(
+                                  image: NetworkImage(recipe['image_url']),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
                         ),
-                        child: Icon(Icons.image, size: 56, color: Colors.grey[400]),
+                        child: recipe['image_url'] == null
+                            ? Icon(Icons.image, size: 56, color: Colors.grey[400])
+                            : null,
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -273,7 +233,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              recipe['name'],
+                              recipe['name'] ?? '',
                               style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
@@ -289,7 +249,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              recipe['type'],
+                              recipe['type'] ?? '',
                               style: TextStyle(
                                 color: recipe['type'] == 'Comida'
                                     ? Colors.orange[700]
@@ -302,7 +262,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${recipe['country']}${recipe['region'] != null ? ' · ${recipe['region']}' : ''}',
+                        '${recipe['country'] ?? ''}${recipe['region'] != null && recipe['region'].toString().isNotEmpty ? ' · ${recipe['region']}' : ''}',
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 12),
@@ -319,9 +279,9 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                         spacing: 16,
                         runSpacing: 8,
                         children: [
-                          if (recipe['prep_time'] != null)
+                          if (recipe['prep_time'] != null && recipe['prep_time'].toString().isNotEmpty)
                             _buildInfoChip(Icons.timer, recipe['prep_time']),
-                          if (recipe['portions'] != null)
+                          if (recipe['portions'] != null && recipe['portions'].toString().isNotEmpty)
                             _buildInfoChip(Icons.people, '${recipe['portions']} porciones'),
                           if (recipe['cooking_style'] != null)
                             _buildInfoChip(Icons.local_fire_department, recipe['cooking_style']),

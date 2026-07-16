@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:remy/controllers/student_controller.dart';
 import 'package:remy/config/app_routes.dart';
 import 'package:remy/views/shared/responsive_layout.dart';
 import 'package:remy/views/shared/widgets/class_card.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
-import 'join_class_screen.dart'; // Importamos el modal que creamos arriba
+import 'join_class_screen.dart';
 
 class MyClassesScreen extends StatefulWidget {
   const MyClassesScreen({super.key});
@@ -13,19 +14,31 @@ class MyClassesScreen extends StatefulWidget {
 }
 
 class _MyClassesScreenState extends State<MyClassesScreen> {
-  // Datos simulados (luego los traeremos de Supabase)
-  final List<Map<String, dynamic>> mockClasses = [
-    {
-      'id': '1',
-      'className': 'Cocina Internacional',
-      'time_left': 'Faltan 6 horas',
-    },
-    {
-      'id': '2',
-      'className': 'Repostería Básica',
-      'time_left': 'Faltan 3 días',
+  final StudentController studentController = StudentController();
+
+  bool isLoading = true;
+  List<Map<String, dynamic>> classes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadClasses();
+  }
+
+  Future<void> _loadClasses() async {
+    setState(() => isLoading = true);
+    try {
+      final data = await studentController.getMyClasses();
+      if (mounted) setState(() => classes = data);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
-  ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,18 +51,19 @@ class _MyClassesScreenState extends State<MyClassesScreen> {
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
-              // Navegación al perfil del alumno
-              // Navigator.pushNamed(context, AppRoutes.profile);
+              Navigator.pushNamed(context, AppRoutes.profile);
             },
             tooltip: 'Mi Perfil',
           ),
         ],
       ),
-      body: ResponsiveLayout(
-        mobile: _buildContent(crossAxisCount: 1),
-        tablet: _buildContent(crossAxisCount: 2),
-        desktop: _buildContent(crossAxisCount: 3),
-      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ResponsiveLayout(
+              mobile: _buildContent(crossAxisCount: 1),
+              tablet: _buildContent(crossAxisCount: 2),
+              desktop: _buildContent(crossAxisCount: 3),
+            ),
     );
   }
 
@@ -68,14 +82,14 @@ class _MyClassesScreenState extends State<MyClassesScreen> {
               ),
               CustomButton(
                 text: 'Unirse a clase',
-                onPressed: () => showJoinClassModal(context),
+                onPressed: () => showJoinClassModal(context, onJoined: _loadClasses),
                 width: 150,
               ),
             ],
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: mockClasses.isEmpty
+            child: classes.isEmpty
                 ? _buildEmptyState()
                 : _buildGrid(crossAxisCount),
           ),
@@ -94,9 +108,9 @@ class _MyClassesScreenState extends State<MyClassesScreen> {
           Text(
             'Aún no tienes clases',
             style: TextStyle(
-              fontSize: 20, 
-              fontWeight: FontWeight.bold, 
-              color: Colors.grey[600]
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
             ),
           ),
           const SizedBox(height: 8),
@@ -110,8 +124,6 @@ class _MyClassesScreenState extends State<MyClassesScreen> {
   }
 
   Widget _buildGrid(int crossAxisCount) {
-    // Usamos un GridView para aprovechar el ResponsiveLayout. 
-    // En móvil (crossAxisCount = 1) se verá como una lista normal.
     return GridView.builder(
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
@@ -119,26 +131,25 @@ class _MyClassesScreenState extends State<MyClassesScreen> {
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
-      itemCount: mockClasses.length + 1, // +1 para el botón de "Unirse a otra"
+      itemCount: classes.length + 1, // +1 para el botón de "Unirse a otra"
       itemBuilder: (context, index) {
-        if (index == mockClasses.length) {
+        if (index == classes.length) {
           return _buildJoinAnotherClassCard();
         }
 
-        final cls = mockClasses[index];
+        final cls = classes[index];
         return ClassCard(
-          className: cls['className'],
-          // Pasamos 0 porque a tu ClassCard le pusiste estas variables como required, 
-          // pero como encendemos isStudent: true, no se van a dibujar en pantalla.
-          studentsCount: 0, 
+          className: '${cls['subject']} · Grupo ${cls['group_name']}',
+          studentsCount: 0,
           deliveredCount: 0,
           isStudent: true,
-          onTap: () => Navigator.pushNamed(context, AppRoutes.studentClassDetail, arguments: cls['id']),
-          /*onTap: () {
-            // Navegación al detalle de la clase para ver entregas
-            // Navigator.pushNamed(context, AppRoutes.studentClassDetail, arguments: cls['id']);
-            
-          },*/
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              AppRoutes.studentClassDetail,
+              arguments: cls['id'],
+            );
+          },
         );
       },
     );
@@ -153,13 +164,13 @@ class _MyClassesScreenState extends State<MyClassesScreen> {
         side: BorderSide(color: Colors.orange[200]!, style: BorderStyle.solid),
       ),
       child: InkWell(
-        onTap: () => showJoinClassModal(context),
+        onTap: () => showJoinClassModal(context, onJoined: _loadClasses),
         borderRadius: BorderRadius.circular(12),
         child: const Center(
           child: Text(
             'Unirse a otra clase',
             style: TextStyle(
-              color: Colors.orange, 
+              color: Colors.orange,
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),

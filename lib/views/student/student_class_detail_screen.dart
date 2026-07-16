@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-// import 'package:remy/controllers/class_controller.dart'; // TODO: Descomentar
-// import 'package:remy/controllers/assignment_controller.dart'; // TODO: Descomentar
+import 'package:remy/controllers/assignment_controller.dart';
 import 'package:remy/config/app_routes.dart';
-import 'package:remy/views/shared/widgets/custom_button.dart';
 
 class StudentClassDetailScreen extends StatefulWidget {
   final String classId;
@@ -15,75 +13,39 @@ class StudentClassDetailScreen extends StatefulWidget {
 }
 
 class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
-  // TODO: Inicializar controllers
-  // final ClassController classController = ClassController();
-  // final AssignmentController assignmentController = AssignmentController();
+  final AssignmentController assignmentController = AssignmentController();
 
-  bool isLoading = false;
-
-  // Datos de ejemplo -- reflejan las tablas classes / assignments / recipes / grades
-  final Map<String, dynamic> mockClass = {
-    'id': '1',
-    'subject': 'Cocina Internacional',
-    'term': '5°',
-    'group_name': 'B',
-    'join_code': 'GAS-5B-7K2',
-  };
-
-  final List<Map<String, dynamic>> mockAssignments = [
-    {
-      'id': 'a1',
-      'title': 'Recetario Unidad 1 -- Entradas',
-      'type': 'Comida',
-      'due_date': DateTime.now().add(const Duration(hours: 6)),
-      'delivered': true,
-      'stars': 4,
-    },
-    {
-      'id': 'a2',
-      'title': 'Recetario Unidad 2 -- Bebidas típicas',
-      'type': 'Bebida',
-      'due_date': DateTime.now().add(const Duration(days: 3)),
-      'delivered': false,
-      'stars': null,
-    },
-    {
-      'id': 'a3',
-      'title': 'Proyecto final -- Platillo insignia',
-      'type': 'Comida',
-      'due_date': DateTime.now().add(const Duration(days: 10)),
-      'delivered': false,
-      'stars': null,
-    },
-  ];
+  bool isLoading = true;
+  Map<String, dynamic>? classData;
+  List<Map<String, dynamic>> assignments = [];
 
   @override
   void initState() {
     super.initState();
-    // TODO: Cargar datos reales
-    // _loadData();
+    _loadData();
   }
 
-  /*
   Future<void> _loadData() async {
     setState(() => isLoading = true);
     try {
-      final classData = await classController.getClassDetail(widget.classId);
-      final assignments =
-          await assignmentController.getAssignmentsForStudent(widget.classId);
+      final results = await Future.wait([
+        assignmentController.getClassDetail(widget.classId),
+        assignmentController.getAssignmentsForStudent(widget.classId),
+      ]);
+      if (!mounted) return;
       setState(() {
-        mockClass = classData;
-        mockAssignments = assignments;
+        classData = results[0] as Map<String, dynamic>;
+        assignments = results[1] as List<Map<String, dynamic>>;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al cargar datos: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
       );
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
-  */
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +61,10 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                 return Center(
                   child: SizedBox(
                     width: maxWidth,
-                    child: _buildBody(),
+                    child: RefreshIndicator(
+                      onRefresh: _loadData,
+                      child: _buildBody(),
+                    ),
                   ),
                 );
               },
@@ -113,13 +78,14 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            mockClass['subject'],
+            classData?['subject'] ?? 'Clase',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          Text(
-            '${mockClass['term']} · Grupo ${mockClass['group_name']}',
-            style: const TextStyle(fontSize: 12, color: Colors.white70),
-          ),
+          if (classData != null)
+            Text(
+              '${classData!['term']} · Grupo ${classData!['group_name']}',
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
+            ),
         ],
       ),
       backgroundColor: Colors.orange,
@@ -138,7 +104,7 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Entregas (${mockAssignments.length})',
+            'Entregas (${assignments.length})',
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
@@ -148,12 +114,12 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: mockAssignments.isEmpty
+            child: assignments.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
-                    itemCount: mockAssignments.length,
+                    itemCount: assignments.length,
                     itemBuilder: (context, index) {
-                      return _buildAssignmentCard(mockAssignments[index]);
+                      return _buildAssignmentCard(assignments[index]);
                     },
                   ),
           ),
@@ -197,7 +163,7 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      assignment['title'],
+                      assignment['title'] ?? '',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
@@ -283,7 +249,6 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
 
   void _handleAssignmentTap(Map<String, dynamic> assignment) {
     if (assignment['delivered'] == true) {
-      // Ya entregó -- navega a ver/editar su receta
       Navigator.pushNamed(
         context,
         AppRoutes.myRecipes,
@@ -293,7 +258,6 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
         },
       );
     } else {
-      // Aún no entrega -- navega a subir receta
       Navigator.pushNamed(
         context,
         AppRoutes.uploadRecipe,
@@ -304,8 +268,7 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
         },
       ).then((result) {
         if (result == true) {
-          // TODO: Recargar assignments tras subir receta
-          // _loadData();
+          _loadData();
         }
       });
     }
