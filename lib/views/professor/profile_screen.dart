@@ -1,6 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-// import 'package:remy/controllers/profile_controller.dart'; // TODO: Descomentar
+import 'package:image_picker/image_picker.dart';
+import 'package:remy/controllers/profile_controller.dart';
 import 'package:remy/config/app_routes.dart';
+import 'package:remy/controllers/auth_controller.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'package:remy/views/shared/widgets/custom_text_field.dart';
 
@@ -12,108 +15,101 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // TODO: Inicializar ProfileController
-  // final ProfileController profileController = ProfileController();
-  
+  final ProfileController profileController = ProfileController();
+  final AuthController authController = AuthController();
+  final ImagePicker _imagePicker = ImagePicker();
+
   final TextEditingController nameController = TextEditingController();
   final TextEditingController currentPasswordController = TextEditingController();
   final TextEditingController newPasswordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
-  
+
   bool _showChangePassword = false;
   bool _isEditing = false;
   bool isLoading = false;
-  
-  // Datos de ejemplo
-  final Map<String, dynamic> mockUser = {
-    'name': 'Dr. Juan Pérez',
-    'email': 'juan.perez@utvm.edu.mx',
-    'avatar': null,
-    'role': 'Profesor',
-  };
+  bool isUploadingAvatar = false;
+
+  Map<String, dynamic>? user;
 
   @override
   void initState() {
     super.initState();
-    nameController.text = mockUser['name'];
-    // TODO: Cargar datos del usuario desde Supabase
-    // _loadUserData();
+    _loadUserData();
   }
 
-  /*
   Future<void> _loadUserData() async {
     setState(() => isLoading = true);
     try {
-      final user = await profileController.getUser();
+      final data = await profileController.getProfile();
+      if (!mounted) return;
       setState(() {
-        mockUser = user;
-        nameController.text = user['name'];
+        user = data;
+        nameController.text = data['full_name'] ?? '';
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al cargar datos: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
       );
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
-  */
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildAppBar(),
-      body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 800),
-          padding: const EdgeInsets.all(24),
-          child: SingleChildScrollView(
-            child: Card(
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Mi Perfil',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
+      body: isLoading && user == null
+          ? const Center(child: CircularProgressIndicator())
+          : Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 800),
+                padding: const EdgeInsets.all(24),
+                child: SingleChildScrollView(
+                  child: Card(
+                    elevation: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Mi Perfil',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Administra tu información personal',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                          const SizedBox(height: 32),
+                          _buildAvatarSection(),
+                          const SizedBox(height: 24),
+                          CustomTextField(
+                            controller: nameController,
+                            label: 'Nombre completo',
+                            prefixIcon: Icons.person,
+                            enabled: _isEditing,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildEmailField(),
+                          const SizedBox(height: 16),
+                          _buildRoleField(),
+                          const SizedBox(height: 16),
+                          _buildPasswordSection(),
+                          const SizedBox(height: 24),
+                          _buildActionButtons(),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Administra tu información personal',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 32),
-                    _buildAvatarSection(),
-                    const SizedBox(height: 24),
-                    CustomTextField(
-                      controller: nameController,
-                      label: 'Nombre completo',
-                      prefixIcon: Icons.person,
-                      enabled: _isEditing,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildEmailField(),
-                    const SizedBox(height: 16),
-                    _buildRoleField(),
-                    const SizedBox(height: 16),
-                    _buildPasswordSection(),
-                    const SizedBox(height: 24),
-                    _buildActionButtons(),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -147,17 +143,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         icon: const Icon(Icons.arrow_back),
         onPressed: () => Navigator.pop(context),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.home),
-          onPressed: () => Navigator.pushNamed(context, AppRoutes.dashboard),
-          tooltip: 'Mis Clases',
-        ),
-      ],
     );
   }
 
   Widget _buildAvatarSection() {
+    final avatarUrl = user?['avatar_url'];
+
     return Center(
       child: Column(
         children: [
@@ -166,13 +157,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               CircleAvatar(
                 radius: 60,
                 backgroundColor: Colors.grey[300],
-                backgroundImage: mockUser['avatar'] != null
-                    ? NetworkImage(mockUser['avatar'])
+                backgroundImage: avatarUrl != null
+                    ? NetworkImage(avatarUrl)
                     : null,
-                child: mockUser['avatar'] == null
+                child: avatarUrl == null
                     ? Icon(Icons.person, size: 60, color: Colors.grey[600])
                     : null,
               ),
+              if (isUploadingAvatar)
+                const Positioned.fill(
+                  child: CircleAvatar(
+                    backgroundColor: Colors.black45,
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
+                ),
               Positioned(
                 bottom: 0,
                 right: 0,
@@ -181,7 +179,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   radius: 20,
                   child: IconButton(
                     icon: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
-                    onPressed: _changeAvatar,
+                    onPressed: isUploadingAvatar ? null : _changeAvatar,
                     padding: EdgeInsets.zero,
                     splashRadius: 20,
                   ),
@@ -219,7 +217,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
                 Text(
-                  mockUser['email'],
+                  user?['email'] ?? '',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
@@ -235,6 +233,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildRoleField() {
+    final role = user?['role'] ?? '';
+    final displayRole = role == 'profesor' ? 'Profesor' : 'Alumno';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -253,7 +254,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(color: Colors.grey[600], fontSize: 12),
               ),
               Text(
-                mockUser['role'],
+                displayRole,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
@@ -327,11 +328,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Expanded(
               child: CustomButton(
                 text: _isEditing ? 'Guardar cambios' : 'Editar perfil',
-                onPressed: _isEditing ? _saveProfile : () {
-                  setState(() {
-                    _isEditing = true;
-                  });
-                },
+                onPressed: _isEditing
+                    ? _saveProfile
+                    : () {
+                        setState(() {
+                          _isEditing = true;
+                        });
+                      },
                 isLoading: isLoading,
               ),
             ),
@@ -342,13 +345,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onPressed: () {
                   setState(() {
                     _isEditing = false;
-                    nameController.text = mockUser['name'];
+                    nameController.text = user?['full_name'] ?? '';
                     _showChangePassword = false;
                     currentPasswordController.clear();
                     newPasswordController.clear();
                     confirmPasswordController.clear();
                   });
-                  Navigator.pop(context);
                 },
                 isOutlined: true,
               ),
@@ -366,14 +368,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _changeAvatar() {
-    // TODO: Implementar selección de imagen
-    // final image = await ImagePicker().pickImage(source: ImageSource.gallery);
-    // await profileController.updateAvatar(image);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Función de cambio de foto en desarrollo')),
-    );
+  Future<void> _changeAvatar() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        imageQuality: 85,
+      );
+      if (image == null) return;
+
+      setState(() => isUploadingAvatar = true);
+
+      final Uint8List bytes = await image.readAsBytes();
+      final newUrl = await profileController.updateAvatar(bytes, image.name);
+
+      if (!mounted) return;
+      setState(() {
+        user = {...?user, 'avatar_url': newUrl};
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('¡Foto de perfil actualizada!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => isUploadingAvatar = false);
+    }
   }
 
   void _saveProfile() async {
@@ -389,11 +416,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
         return;
       }
-      
+
       if (newPasswordController.text != confirmPasswordController.text) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Las contraseñas no coinciden'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      if (newPasswordController.text.length < 6) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('La contraseña nueva debe tener al menos 6 caracteres'),
             backgroundColor: Colors.red,
           ),
         );
@@ -405,59 +442,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
       isLoading = true;
     });
 
-    // TODO: Guardar cambios en Supabase
-    /*
     try {
-      await profileController.updateProfile({
-        'name': nameController.text,
-        'currentPassword': currentPasswordController.text,
-        'newPassword': newPasswordController.text,
+      if (nameController.text.trim().isNotEmpty &&
+          nameController.text.trim() != user?['full_name']) {
+        await profileController.updateName(nameController.text.trim());
+      }
+
+      if (_showChangePassword) {
+        await profileController.changePassword(
+          currentPassword: currentPasswordController.text,
+          newPassword: newPasswordController.text,
+        );
+      }
+
+      if (!mounted) return;
+      setState(() {
+        user = {...?user, 'full_name': nameController.text.trim()};
+        _isEditing = false;
+        _showChangePassword = false;
+        currentPasswordController.clear();
+        newPasswordController.clear();
+        confirmPasswordController.clear();
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('¡Perfil actualizado exitosamente!'),
           backgroundColor: Colors.green,
         ),
       );
-      
-      setState(() {
-        _isEditing = false;
-        _showChangePassword = false;
-      });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
       );
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) setState(() => isLoading = false);
     }
-    */
-
-    // Simulación (eliminar después)
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() {
-      isLoading = false;
-      _isEditing = false;
-      _showChangePassword = false;
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('¡Perfil actualizado exitosamente!'),
-        backgroundColor: Colors.green,
-      ),
-    );
   }
 
-  void _logout() {
-    // TODO: Llamar a authController.logout()
-    // await authController.logout();
+  void _logout() async {
+    await authController.logout();
+    if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(
       context,
       AppRoutes.login,

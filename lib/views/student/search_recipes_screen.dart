@@ -1,5 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-// import 'package:remy/controllers/recipe_controller.dart'; // TODO: Descomentar
+import 'package:remy/controllers/recipe_controller.dart';
 import 'package:remy/views/shared/responsive_layout.dart';
 import 'package:remy/views/shared/widgets/custom_text_field.dart';
 
@@ -11,16 +12,20 @@ class SearchRecipesScreen extends StatefulWidget {
 }
 
 class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
-  // TODO: Inicializar RecipeController
-  // final RecipeController recipeController = RecipeController();
+  final RecipeController recipeController = RecipeController();
 
   final TextEditingController searchController = TextEditingController();
+  Timer? _debounce;
+
   String searchQuery = '';
   String? selectedType;
   String? selectedCountry;
   String? selectedCookingStyle;
   bool isLoading = false;
   bool showFilters = false;
+
+  List<Map<String, dynamic>> results = [];
+  List<String> countryOptions = [];
 
   final List<String> typeOptions = ['Comida', 'Bebida'];
   final List<String> cookingStyleOptions = [
@@ -33,73 +38,57 @@ class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
     'Asado',
   ];
 
-  // Datos de ejemplo -- recetas de otros alumnos, visibles para explorar/buscar
-  final List<Map<String, dynamic>> mockRecipes = [
-    {
-      'id': 'r1',
-      'name': 'Mole Poblano',
-      'type': 'Comida',
-      'country': 'México',
-      'cooking_style': 'Hervido',
-      'author': 'María González',
-      'stars': 4,
-    },
-    {
-      'id': 'r2',
-      'name': 'Agua de Jamaica',
-      'type': 'Bebida',
-      'country': 'México',
-      'cooking_style': 'Hervido',
-      'author': 'Juan Pérez',
-      'stars': 5,
-    },
-    {
-      'id': 'r3',
-      'name': 'Ceviche de Pescado',
-      'type': 'Comida',
-      'country': 'Perú',
-      'cooking_style': 'Crudo',
-      'author': 'Ana Martínez',
-      'stars': 5,
-    },
-    {
-      'id': 'r4',
-      'name': 'Pan de Muerto',
-      'type': 'Comida',
-      'country': 'México',
-      'cooking_style': 'Horneado',
-      'author': 'Carlos López',
-      'stars': 3,
-    },
-    {
-      'id': 'r5',
-      'name': 'Sangría',
-      'type': 'Bebida',
-      'country': 'España',
-      'cooking_style': 'Crudo',
-      'author': 'Laura Sánchez',
-      'stars': null,
-    },
-  ];
-
-  List<String> get countryOptions =>
-      mockRecipes.map((r) => r['country'] as String).toSet().toList()..sort();
-
-  List<Map<String, dynamic>> get _filteredRecipes {
-    return mockRecipes.where((r) {
-      final matchesQuery = searchQuery.isEmpty ||
-          r['name'].toString().toLowerCase().contains(searchQuery);
-      final matchesType = selectedType == null || r['type'] == selectedType;
-      final matchesCountry =
-          selectedCountry == null || r['country'] == selectedCountry;
-      final matchesStyle = selectedCookingStyle == null ||
-          r['cooking_style'] == selectedCookingStyle;
-      return matchesQuery && matchesType && matchesCountry && matchesStyle;
-    }).toList();
-  }
-
   bool get _hasActiveFilters =>
       selectedType != null || selectedCountry != null || selectedCookingStyle != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCountries();
+    _search();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadCountries() async {
+    try {
+      final countries = await recipeController.getAvailableCountries();
+      if (mounted) setState(() => countryOptions = countries);
+    } catch (_) {
+      // Silencioso: los filtros de país simplemente quedarán vacíos
+    }
+  }
+
+  Future<void> _search() async {
+    setState(() => isLoading = true);
+    try {
+      final data = await recipeController.searchRecipes(
+        query: searchQuery,
+        type: selectedType,
+        country: selectedCountry,
+        cookingStyle: selectedCookingStyle,
+      );
+      if (mounted) setState(() => results = data);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  void _onQueryChanged(String value) {
+    searchQuery = value.trim();
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), _search);
+  }
 
   void _clearFilters() {
     setState(() {
@@ -107,6 +96,7 @@ class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
       selectedCountry = null;
       selectedCookingStyle = null;
     });
+    _search();
   }
 
   @override
@@ -142,7 +132,7 @@ class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
                   Expanded(
                     child: isLoading
                         ? const Center(child: CircularProgressIndicator())
-                        : _filteredRecipes.isEmpty
+                        : results.isEmpty
                             ? _buildEmptyState()
                             : ResponsiveLayout(
                                 mobile: _buildGrid(1),
@@ -167,9 +157,7 @@ class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
             controller: searchController,
             label: 'Buscar receta por nombre...',
             prefixIcon: Icons.search,
-            onChanged: (value) {
-              setState(() => searchQuery = value.toLowerCase());
-            },
+            onChanged: _onQueryChanged,
           ),
         ),
         const SizedBox(width: 8),
@@ -239,7 +227,10 @@ class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
                     items: typeOptions
                         .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                         .toList(),
-                    onChanged: (v) => setState(() => selectedType = v),
+                    onChanged: (v) {
+                      setState(() => selectedType = v);
+                      _search();
+                    },
                   ),
                 ),
                 SizedBox(
@@ -254,7 +245,10 @@ class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
                     items: countryOptions
                         .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                         .toList(),
-                    onChanged: (v) => setState(() => selectedCountry = v),
+                    onChanged: (v) {
+                      setState(() => selectedCountry = v);
+                      _search();
+                    },
                   ),
                 ),
                 SizedBox(
@@ -269,7 +263,10 @@ class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
                     items: cookingStyleOptions
                         .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                         .toList(),
-                    onChanged: (v) => setState(() => selectedCookingStyle = v),
+                    onChanged: (v) {
+                      setState(() => selectedCookingStyle = v);
+                      _search();
+                    },
                   ),
                 ),
               ],
@@ -290,8 +287,8 @@ class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
         ),
-        itemCount: _filteredRecipes.length,
-        itemBuilder: (context, index) => _buildResultCard(_filteredRecipes[index]),
+        itemCount: results.length,
+        itemBuilder: (context, index) => _buildResultCard(results[index]),
       ),
     );
   }
@@ -315,11 +312,19 @@ class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(8),
+                  image: recipe['image_url'] != null
+                      ? DecorationImage(
+                          image: NetworkImage(recipe['image_url']),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                 ),
-                child: Icon(
-                  recipe['type'] == 'Comida' ? Icons.restaurant : Icons.local_drink,
-                  color: Colors.grey[400],
-                ),
+                child: recipe['image_url'] == null
+                    ? Icon(
+                        recipe['type'] == 'Comida' ? Icons.restaurant : Icons.local_drink,
+                        color: Colors.grey[400],
+                      )
+                    : null,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -327,21 +332,21 @@ class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      recipe['name'],
+                      recipe['name'] ?? '',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${recipe['country']} · ${recipe['cooking_style']}',
+                      '${recipe['country'] ?? ''} · ${recipe['cooking_style'] ?? ''}',
                       style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Por ${recipe['author']}',
+                      'Por ${recipe['author'] ?? 'Alumno'}',
                       style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                     ),
                     const SizedBox(height: 4),
@@ -366,34 +371,47 @@ class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
   }
 
   void _showRecipePreview(Map<String, dynamic> recipe) {
+    final List ingredients = recipe['ingredients'] ?? [];
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                recipe['name'],
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text('${recipe['type']} · ${recipe['country']} · ${recipe['cooking_style']}'),
-              const SizedBox(height: 4),
-              Text('Autor: ${recipe['author']}', style: TextStyle(color: Colors.grey[600])),
-              const SizedBox(height: 16),
-              const Text(
-                'TODO: Aquí se mostrará el detalle completo (ingredientes, procedimiento) '
-                'consultando recipe_controller.getRecipeDetail(id).',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-            ],
-          ),
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return ListView(
+              controller: scrollController,
+              padding: const EdgeInsets.all(24),
+              children: [
+                Text(
+                  recipe['name'] ?? '',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text('${recipe['type']} · ${recipe['country']} · ${recipe['cooking_style'] ?? ''}'),
+                const SizedBox(height: 4),
+                Text('Autor: ${recipe['author'] ?? 'Alumno'}',
+                    style: TextStyle(color: Colors.grey[600])),
+                const SizedBox(height: 16),
+                const Text('Ingredientes', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ...ingredients.map((ing) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Text('• ${ing['name']} -- ${ing['quantity']}'),
+                    )),
+                const SizedBox(height: 16),
+                const Text('Procedimiento', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(recipe['procedure'] ?? '', style: const TextStyle(height: 1.5)),
+              ],
+            );
+          },
         );
       },
     );

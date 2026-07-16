@@ -1,6 +1,8 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-// import 'package:remy/controllers/recipe_controller.dart'; // TODO: Descomentar
-// import 'package:remy/services/storage_service.dart'; // TODO: Descomentar (subida a bucket recipes_images)
+import 'package:image_picker/image_picker.dart';
+import 'package:remy/controllers/recipe_controller.dart';
+import 'package:remy/services/storage_service.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'package:remy/views/shared/widgets/custom_text_field.dart';
 
@@ -23,8 +25,9 @@ class UploadRecipeScreen extends StatefulWidget {
 }
 
 class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
-  // TODO: Inicializar RecipeController
-  // final RecipeController recipeController = RecipeController();
+  final RecipeController recipeController = RecipeController();
+  final StorageService storageService = StorageService();
+  final ImagePicker _imagePicker = ImagePicker();
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController countryController = TextEditingController();
@@ -39,28 +42,36 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
   String? selectedCookingStyle;
   bool isLoading = false;
 
-  // TODO: Reemplazar por File/Uint8List real desde ImagePicker
-  String? pickedImagePath;
+  Uint8List? pickedImageBytes;
+  String? pickedImageName;
 
+  // Valores exactos del enum cooking_style en Supabase -- deben coincidir
+  // literalmente (incluye acentos y mayúsculas/minúsculas).
   final List<String> cookingStyles = [
-    'Horneado',
-    'Frito',
-    'Hervido',
-    'Al vapor',
-    'A la plancha',
-    'Crudo',
-    'Asado',
+    'Hervir',
+    'Blanquear',
+    'Pochar/Escalfar',
+    'Cocer al vapor',
+    'Estofar',
+    'Brasear',
+    'Saltear',
+    'Freír por inmersión',
+    'Freír con poca grasa',
+    'Asar',
+    'Hornear',
+    'Gratinar',
+    'Rostizar',
+    'Confitar',
   ];
 
   // Lista dinámica de ingredientes -- se guarda como JSONB
-  // Cada item: {'name': ..., 'quantity': ...}
   final List<Map<String, TextEditingController>> ingredientControllers = [];
 
   @override
   void initState() {
     super.initState();
     selectedType = widget.recipeType == 'Ambos' ? null : widget.recipeType;
-    _addIngredientRow(); // Empieza con un ingrediente vacío
+    _addIngredientRow();
   }
 
   void _addIngredientRow() {
@@ -253,7 +264,7 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey[300]!),
           ),
-          child: pickedImagePath == null
+          child: pickedImageBytes == null
               ? Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -270,10 +281,7 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Container(
-                        color: Colors.grey[300],
-                        child: const Center(child: Icon(Icons.image, size: 48)),
-                      ),
+                      Image.memory(pickedImageBytes!, fit: BoxFit.cover),
                       Positioned(
                         top: 8,
                         right: 8,
@@ -282,7 +290,10 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
                           radius: 16,
                           child: IconButton(
                             icon: const Icon(Icons.close, size: 16, color: Colors.white),
-                            onPressed: () => setState(() => pickedImagePath = null),
+                            onPressed: () => setState(() {
+                              pickedImageBytes = null;
+                              pickedImageName = null;
+                            }),
                             padding: EdgeInsets.zero,
                           ),
                         ),
@@ -403,16 +414,28 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
   }
 
   void _pickImage() async {
-    // TODO: Implementar con image_picker
-    // final image = await ImagePicker().pickImage(source: ImageSource.gallery);
-    // if (image != null) setState(() => pickedImagePath = image.path);
-    setState(() {
-      pickedImagePath = 'placeholder';
-    });
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        imageQuality: 85,
+      );
+      if (image == null) return;
+
+      final bytes = await image.readAsBytes();
+      setState(() {
+        pickedImageBytes = bytes;
+        pickedImageName = image.name;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al seleccionar la imagen: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   void _submitRecipe() async {
-    // Validación de campos obligatorios
     final hasIngredients = ingredientControllers.any(
       (row) => row['name']!.text.trim().isNotEmpty,
     );
@@ -433,7 +456,6 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
 
     setState(() => isLoading = true);
 
-    // Construimos el JSONB de ingredientes
     final ingredients = ingredientControllers
         .where((row) => row['name']!.text.trim().isNotEmpty)
         .map((row) => {
@@ -442,12 +464,13 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
             })
         .toList();
 
-    // TODO: Conectar con Supabase
-    /*
     try {
       String? imageUrl;
-      if (pickedImagePath != null) {
-        imageUrl = await storageService.uploadRecipeImage(pickedImagePath!);
+      if (pickedImageBytes != null) {
+        imageUrl = await storageService.uploadRecipeImage(
+          pickedImageBytes!,
+          pickedImageName ?? 'recipe.jpg',
+        );
       }
 
       final recipe = {
@@ -458,7 +481,7 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
         'region': regionController.text.trim(),
         'cooking_style': selectedCookingStyle,
         'mise_en_place': miseEnPlaceController.text.trim(),
-        'ingredients': ingredients, // jsonb
+        'ingredients': ingredients,
         'sauce': sauceController.text.trim(),
         'procedure': procedureController.text.trim(),
         'prep_time': prepTimeController.text.trim(),
@@ -468,29 +491,21 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
 
       await recipeController.createRecipe(recipe);
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('¡Receta publicada exitosamente!'), backgroundColor: Colors.green),
+        const SnackBar(
+          content: Text('¡Receta publicada exitosamente!'),
+          backgroundColor: Colors.green,
+        ),
       );
       Navigator.pop(context, true);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
       );
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
-    */
-
-    // Simulación (eliminar después)
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() => isLoading = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('¡Receta publicada exitosamente!'),
-        backgroundColor: Colors.green,
-      ),
-    );
-    Navigator.pop(context, true);
   }
 }

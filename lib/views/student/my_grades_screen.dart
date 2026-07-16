@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-// import 'package:remy/controllers/student_controller.dart'; // TODO: Descomentar
+import 'package:remy/controllers/student_controller.dart';
 
 class MyGradesScreen extends StatefulWidget {
   const MyGradesScreen({super.key});
@@ -9,58 +9,34 @@ class MyGradesScreen extends StatefulWidget {
 }
 
 class _MyGradesScreenState extends State<MyGradesScreen> {
-  // TODO: Inicializar StudentController
-  // final StudentController studentController = StudentController();
+  final StudentController studentController = StudentController();
 
-  bool isLoading = false;
-
-  // Datos de ejemplo -- reflejan classes + assignments + recipes + grades
-  final List<Map<String, dynamic>> mockGradesByClass = [
-    {
-      'class_id': '1',
-      'subject': 'Cocina Internacional',
-      'group_name': 'B',
-      'grades': [
-        {'assignment_title': 'Recetario Unidad 1 -- Entradas', 'recipe_name': 'Mole Poblano', 'stars': 4},
-        {'assignment_title': 'Recetario Unidad 2 -- Bebidas típicas', 'recipe_name': null, 'stars': null},
-      ],
-    },
-    {
-      'class_id': '2',
-      'subject': 'Repostería Básica',
-      'group_name': 'A',
-      'grades': [
-        {'assignment_title': 'Proyecto final -- Pastel', 'recipe_name': 'Pastel Tres Leches', 'stars': 5},
-        {'assignment_title': 'Práctica -- Pan dulce', 'recipe_name': 'Concha', 'stars': 3},
-      ],
-    },
-  ];
+  bool isLoading = true;
+  List<Map<String, dynamic>> gradesByClass = [];
 
   @override
   void initState() {
     super.initState();
-    // TODO: Cargar calificaciones reales
-    // _loadGrades();
+    _loadGrades();
   }
 
-  /*
   Future<void> _loadGrades() async {
     setState(() => isLoading = true);
     try {
-      final grades = await studentController.getMyGrades();
-      setState(() => mockGradesByClass = grades);
+      final data = await studentController.getMyGrades();
+      if (mounted) setState(() => gradesByClass = data);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al cargar calificaciones: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
       );
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
-  */
 
   double? get _overallAverage {
-    final allStars = mockGradesByClass
+    final allStars = gradesByClass
         .expand((c) => c['grades'] as List)
         .map((g) => g['stars'])
         .where((s) => s != null)
@@ -84,7 +60,7 @@ class _MyGradesScreenState extends State<MyGradesScreen> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : mockGradesByClass.isEmpty
+          : gradesByClass.isEmpty
               ? _buildEmptyState()
               : LayoutBuilder(
                   builder: (context, constraints) {
@@ -93,13 +69,16 @@ class _MyGradesScreenState extends State<MyGradesScreen> {
                     return Center(
                       child: SizedBox(
                         width: maxWidth,
-                        child: ListView(
-                          padding: const EdgeInsets.all(16),
-                          children: [
-                            _buildAverageCard(),
-                            const SizedBox(height: 20),
-                            ...mockGradesByClass.map(_buildClassSection),
-                          ],
+                        child: RefreshIndicator(
+                          onRefresh: _loadGrades,
+                          child: ListView(
+                            padding: const EdgeInsets.all(16),
+                            children: [
+                              _buildAverageCard(),
+                              const SizedBox(height: 20),
+                              ...gradesByClass.map(_buildClassSection),
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -182,7 +161,7 @@ class _MyGradesScreenState extends State<MyGradesScreen> {
     final int? stars = grade['stars'];
 
     return ListTile(
-      title: Text(grade['assignment_title']),
+      title: Text(grade['assignment_title'] ?? ''),
       subtitle: Text(
         grade['recipe_name'] != null
             ? 'Receta: ${grade['recipe_name']}'

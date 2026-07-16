@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:remy/controllers/student_controller.dart';
 import '../shared/widgets/custom_button.dart';
 import '../shared/widgets/custom_text_field.dart';
 
-void showJoinClassModal(BuildContext context) {
+void showJoinClassModal(BuildContext context, {VoidCallback? onJoined}) {
   final TextEditingController codeController = TextEditingController();
+  final StudentController studentController = StudentController();
   bool isLoading = false;
 
   showDialog(
     context: context,
     builder: (context) {
-      return StatefulBuilder( // Usamos StatefulBuilder para poder actualizar el estado del botón de carga dentro del modal
+      return StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -18,8 +20,8 @@ void showJoinClassModal(BuildContext context) {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.orange[100], 
-                    borderRadius: BorderRadius.circular(8)
+                    color: Colors.orange[100],
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(Icons.class_, color: Colors.orange[800]),
                 ),
@@ -41,7 +43,6 @@ void showJoinClassModal(BuildContext context) {
                   label: 'Código de clase',
                   hint: 'Ej. GAS-5B-7K2',
                   onChanged: (value) {
-                    // Forzamos a mayúsculas como pide el requerimiento
                     codeController.value = TextEditingValue(
                       text: value.toUpperCase(),
                       selection: codeController.selection,
@@ -66,29 +67,41 @@ void showJoinClassModal(BuildContext context) {
                   text: 'Unirse',
                   isLoading: isLoading,
                   onPressed: () async {
-                    if (codeController.text.isEmpty) return;
-                    
+                    if (codeController.text.trim().isEmpty) return;
+
                     setState(() => isLoading = true);
-                    
-                    // TODO: Aquí conectaremos el student_controller.dart más adelante
-                    await Future.delayed(const Duration(seconds: 1)); // Simulación
-                    
-                    setState(() => isLoading = false);
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('¡Te has unido a la clase exitosamente!'), 
-                          backgroundColor: Colors.green
-                        ),
-                      );
+
+                    try {
+                      await studentController.joinClass(codeController.text);
+
+                      setState(() => isLoading = false);
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('¡Te has unido a la clase exitosamente!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        onJoined?.call();
+                      }
+                    } catch (e) {
+                      setState(() => isLoading = false);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(e.toString()),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     }
                   },
                 ),
               ),
             ],
           );
-        }
+        },
       );
     },
   );
