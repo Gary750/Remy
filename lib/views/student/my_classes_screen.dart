@@ -47,6 +47,7 @@ class _MyClassesScreenState extends State<MyClassesScreen> {
         title: const Text('Mis clases'),
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.person),

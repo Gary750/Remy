@@ -20,11 +20,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final ImagePicker _imagePicker = ImagePicker();
 
   final TextEditingController nameController = TextEditingController();
-  final TextEditingController currentPasswordController = TextEditingController();
-  final TextEditingController newPasswordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
 
-  bool _showChangePassword = false;
   bool _isEditing = false;
   bool isLoading = false;
   bool isUploadingAvatar = false;
@@ -99,8 +95,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _buildEmailField(),
                           const SizedBox(height: 16),
                           _buildRoleField(),
-                          const SizedBox(height: 16),
-                          _buildPasswordSection(),
                           const SizedBox(height: 24),
                           _buildActionButtons(),
                         ],
@@ -264,62 +258,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildPasswordSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: () {
-            setState(() {
-              _showChangePassword = !_showChangePassword;
-            });
-          },
-          child: Row(
-            children: [
-              const Icon(Icons.lock, color: Colors.orange),
-              const SizedBox(width: 12),
-              const Text(
-                'Cambiar contraseña',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                _showChangePassword ? Icons.expand_less : Icons.expand_more,
-                color: Colors.grey,
-              ),
-            ],
-          ),
-        ),
-        if (_showChangePassword) ...[
-          const SizedBox(height: 16),
-          CustomTextField(
-            controller: currentPasswordController,
-            label: 'Contraseña actual *',
-            prefixIcon: Icons.lock_outline,
-            obscureText: true,
-          ),
-          const SizedBox(height: 12),
-          CustomTextField(
-            controller: newPasswordController,
-            label: 'Contraseña nueva *',
-            prefixIcon: Icons.lock_outline,
-            obscureText: true,
-          ),
-          const SizedBox(height: 12),
-          CustomTextField(
-            controller: confirmPasswordController,
-            label: 'Confirmar contraseña nueva *',
-            prefixIcon: Icons.lock_outline,
-            obscureText: true,
-          ),
-        ],
-      ],
-    );
-  }
-
   Widget _buildActionButtons() {
     return Column(
       children: [
@@ -346,10 +284,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   setState(() {
                     _isEditing = false;
                     nameController.text = user?['full_name'] ?? '';
-                    _showChangePassword = false;
-                    currentPasswordController.clear();
-                    newPasswordController.clear();
-                    confirmPasswordController.clear();
                   });
                 },
                 isOutlined: true,
@@ -404,40 +338,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _saveProfile() async {
-    if (_showChangePassword) {
-      if (currentPasswordController.text.isEmpty ||
-          newPasswordController.text.isEmpty ||
-          confirmPasswordController.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Completa todos los campos de contraseña'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      if (newPasswordController.text != confirmPasswordController.text) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Las contraseñas no coinciden'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      if (newPasswordController.text.length < 6) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('La contraseña nueva debe tener al menos 6 caracteres'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-    }
-
     setState(() {
       isLoading = true;
     });
@@ -448,21 +348,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await profileController.updateName(nameController.text.trim());
       }
 
-      if (_showChangePassword) {
-        await profileController.changePassword(
-          currentPassword: currentPasswordController.text,
-          newPassword: newPasswordController.text,
-        );
-      }
-
       if (!mounted) return;
       setState(() {
         user = {...?user, 'full_name': nameController.text.trim()};
         _isEditing = false;
-        _showChangePassword = false;
-        currentPasswordController.clear();
-        newPasswordController.clear();
-        confirmPasswordController.clear();
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
