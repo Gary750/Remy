@@ -50,12 +50,19 @@ class MyApp extends StatelessWidget {
       initialRoute: AppRoutes.login,
       onGenerateRoute: (settings) {
         switch (settings.name) {
+          // Ruta raíz que Flutter genera automáticamente junto con
+          // initialRoute (ver Navigator.defaultGenerateInitialRoutes).
+          // Sin este caso, un "pop" que llegue hasta el fondo de la pila
+          // cae en el default y muestra "Ruta no encontrada: /".
+          case '/':
+            return MaterialPageRoute(builder: (_) => const LoginScreen());
+
           // Autenticación
           case AppRoutes.login:
             return MaterialPageRoute(builder: (_) => const LoginScreen());
           case AppRoutes.register:
             return MaterialPageRoute(builder: (_) => const RegisterScreen());
-            
+
           // Profesor
           case AppRoutes.dashboard:
             return MaterialPageRoute(builder: (_) => const DashboardScreen());
@@ -81,9 +88,11 @@ class MyApp extends StatelessWidget {
           // Alumno
           case AppRoutes.studentDashboard:
             return MaterialPageRoute(builder: (_) => const MyClassesScreen());
-            case AppRoutes.studentClassDetail:
-          final args = settings.arguments as String;
-          return MaterialPageRoute(builder: (_) => StudentClassDetailScreen(classId: args));
+          case AppRoutes.studentClassDetail:
+            final args = settings.arguments as String;
+            return MaterialPageRoute(
+              builder: (_) => StudentClassDetailScreen(classId: args),
+            );
           case AppRoutes.uploadRecipe:
             final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(
@@ -101,10 +110,11 @@ class MyApp extends StatelessWidget {
                 classId: args?['classId'],
               ),
             );
-            case AppRoutes.myGrades:
-              return MaterialPageRoute(builder: (_) => const MyGradesScreen());
-            case AppRoutes.searchRecipes:
-              return MaterialPageRoute(builder: (_) => const SearchRecipesScreen());
+          case AppRoutes.myGrades:
+            return MaterialPageRoute(builder: (_) => const MyGradesScreen());
+          case AppRoutes.searchRecipes:
+            return MaterialPageRoute(builder: (_) => const SearchRecipesScreen());
+
           // Fallback
           default:
             return MaterialPageRoute(
