@@ -41,18 +41,18 @@ class AuthProvider extends ChangeNotifier {
         _error = null;
       } else {
         _error = 'No se encontró el perfil del usuario';
+        _currentUser = null;
       }
     } catch (e) {
       _error = 'Error al cargar el perfil';
+      _currentUser = null;
       print('Error loading profile: $e');
     }
-    // ✅ NO llamar a notifyListeners aquí para evitar el error
   }
 
   Future<bool> signIn(String email, String password) async {
     _isLoading = true;
     _error = null;
-    // ✅ Notificar UNA SOLA VEZ al inicio
     notifyListeners();
 
     try {
@@ -66,7 +66,6 @@ class AuthProvider extends ChangeNotifier {
         if (_currentUser != null) {
           print('✅ Login exitoso: ${_currentUser!.fullName}');
           _isLoading = false;
-          // ✅ Notificar después de todo el proceso
           notifyListeners();
           return true;
         } else {
@@ -83,7 +82,19 @@ class AuthProvider extends ChangeNotifier {
       }
     } catch (e) {
       print('❌ Error en login: $e');
-      _error = 'Error al iniciar sesión: ${e.toString().replaceFirst('Exception:', '')}';
+      
+      // ✅ Mostrar error específico según el tipo de error
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('invalid credentials') || 
+          errorStr.contains('invalid login') ||
+          errorStr.contains('user not found')) {
+        _error = '❌ Correo o contraseña incorrectos';
+      } else if (errorStr.contains('email not confirmed')) {
+        _error = '❌ Correo no verificado. Revisa tu bandeja de entrada.';
+      } else {
+        _error = '❌ Error al iniciar sesión. Intenta de nuevo.';
+      }
+      
       _isLoading = false;
       notifyListeners();
       return false;

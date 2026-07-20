@@ -92,7 +92,7 @@ class AuthWrapper extends StatelessWidget {
       );
     }
 
-    // ✅ Si no está logueado, mostrar login
+    // ✅ Si NO está logueado, mostrar login
     if (!authProvider.isLoggedIn) {
       return const LoginScreen();
     }
@@ -102,7 +102,6 @@ class AuthWrapper extends StatelessWidget {
     if (user?.role == 'profesor') {
       return const ProfessorDashboardScreen();
     } else {
-      // Temporal - después se crea el dashboard de estudiante
       return const ProfessorDashboardScreen();
     }
   }
