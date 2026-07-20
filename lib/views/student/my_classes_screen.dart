@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:remy/controllers/student_controller.dart';
 import 'package:remy/config/app_routes.dart';
+import 'package:remy/models/class_model.dart';
 import 'package:remy/views/shared/responsive_layout.dart';
 import 'package:remy/views/shared/widgets/class_card.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'join_class_screen.dart';
 
-class MyClassesScreen extends StatefulWidget {
-  const MyClassesScreen({super.key});
+class StudentMyClassesScreen extends StatefulWidget {
+  const StudentMyClassesScreen({super.key});
 
   @override
-  State<MyClassesScreen> createState() => _MyClassesScreenState();
+  State<StudentMyClassesScreen> createState() => _StudentMyClassesScreenState();
 }
 
-class _MyClassesScreenState extends State<MyClassesScreen> {
+class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> {
   final StudentController studentController = StudentController();
 
   bool isLoading = true;
@@ -40,6 +41,17 @@ class _MyClassesScreenState extends State<MyClassesScreen> {
     }
   }
 
+  void showJoinClassModal(BuildContext context, {required VoidCallback onJoined}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => JoinClassScreen(onJoined: onJoined),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -52,7 +64,7 @@ class _MyClassesScreenState extends State<MyClassesScreen> {
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
-              Navigator.pushNamed(context, AppRoutes.profile);
+              Navigator.pushNamed(context, AppRoutes.studentProfile);
             },
             tooltip: 'Mi Perfil',
           ),
@@ -132,18 +144,27 @@ class _MyClassesScreenState extends State<MyClassesScreen> {
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
-      itemCount: classes.length + 1, // +1 para el botón de "Unirse a otra"
+      itemCount: classes.length + 1,
       itemBuilder: (context, index) {
         if (index == classes.length) {
           return _buildJoinAnotherClassCard();
         }
 
         final cls = classes[index];
+        
+        final classModel = ClassModel(
+          id: cls['id'] ?? '',
+          professorId: cls['professor_id'] ?? '',
+          subject: cls['subject'] ?? '',
+          term: cls['term'] ?? '',
+          groupName: cls['group_name'] ?? '',
+          joinCode: cls['join_code'] ?? '',
+          createdAt: DateTime.now(),
+          studentCount: 0,
+        );
+
         return ClassCard(
-          className: '${cls['subject']} · Grupo ${cls['group_name']}',
-          studentsCount: 0,
-          deliveredCount: 0,
-          isStudent: true,
+          classModel: classModel,
           onTap: () {
             Navigator.pushNamed(
               context,
