@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:remy/controllers/auth_controller.dart';
-import 'package:remy/config/app_routes.dart';
+import 'package:provider/provider.dart';
+import 'package:remy/providers/auth_provider.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'package:remy/views/shared/widgets/custom_text_field.dart';
+import 'package:remy/views/shared/widgets/loading_widget.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -12,242 +13,288 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final AuthController authController = AuthController();
-
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController =
-      TextEditingController();
-
-  bool obscurePassword = true;
-  bool obscureConfirmPassword = true;
-  bool isLoading = false;
-  String? selectedRole; // Variable para el rol
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _nameController = TextEditingController();
+  
+  String? _selectedRole = 'student';
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+  String? _errorMessage;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Crear Usuario'),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
-          padding: const EdgeInsets.all(24),
-          child: Card(
-            elevation: 4,
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'Crear Cuenta',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Regístrate para comenzar a usar REMY',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    const SizedBox(height: 24),
-
-                    CustomTextField(
-                      controller: nameController,
-                      label: 'Nombre completo *',
-                      hint: 'Tu nombre completo',
-                      prefixIcon: Icons.person,
-                    ),
-                    const SizedBox(height: 16),
-
-                    CustomTextField(
-                      controller: emailController,
-                      label: 'Correo electrónico *',
-                      hint: 'ejemplo@correo.com',
-                      prefixIcon: Icons.email,
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Selector de Rol
-                    // Dentro de lib/views/auth/register_screen.dart
-                    DropdownButtonFormField<String>(
-                      value: selectedRole,
-                      decoration: const InputDecoration(
-                        labelText: 'Rol *',
-                        prefixIcon: Icon(Icons.badge, color: Colors.grey),
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        // El 'value' es lo que se manda a la base de datos (debe ir en minúsculas)
-                        // El 'child' es el texto que ve el usuario en la pantalla (puede llevar mayúscula)
-                        DropdownMenuItem(
-                          value: 'profesor',
-                          child: Text('Profesor'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'alumno',
-                          child: Text('Alumno'),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          selectedRole = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    CustomTextField(
-                      controller: passwordController,
-                      label: 'Contraseña *',
-                      hint: 'Mínimo 6 caracteres',
-                      prefixIcon: Icons.lock,
-                      suffixIcon: obscurePassword
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                      onSuffixPressed: () {
-                        setState(() {
-                          obscurePassword = !obscurePassword;
-                        });
-                      },
-                      obscureText: obscurePassword,
-                    ),
-                    const SizedBox(height: 16),
-
-                    CustomTextField(
-                      controller: confirmPasswordController,
-                      label: 'Confirmar contraseña *',
-                      hint: 'Repite tu contraseña',
-                      prefixIcon: Icons.lock_outline,
-                      suffixIcon: obscureConfirmPassword
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                      onSuffixPressed: () {
-                        setState(() {
-                          obscureConfirmPassword = !obscureConfirmPassword;
-                        });
-                      },
-                      obscureText: obscureConfirmPassword,
-                    ),
-                    const SizedBox(height: 24),
-
-                    CustomButton(
-                      text: 'Registrarse',
-                      onPressed: _register,
-                      isLoading: isLoading,
-                    ),
-                    const SizedBox(height: 16),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('¿Ya tienes cuenta?'),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pushReplacementNamed(
-                              context,
-                              AppRoutes.login,
-                            );
-                          },
-                          child: const Text('Inicia sesión'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _nameController.dispose();
+    super.dispose();
   }
 
-  void _register() async {
-    // 1. Validar campos vacíos incluyendo el rol
-    if (nameController.text.isEmpty ||
-        emailController.text.isEmpty ||
-        passwordController.text.isEmpty ||
-        confirmPasswordController.text.isEmpty ||
-        selectedRole == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor completa todos los campos'),
-          backgroundColor: Colors.red,
-        ),
-      );
+  Future<void> _register() async {
+    // Validar formulario
+    if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    // 2. Validar formato de correo
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(emailController.text.trim())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ingresa un correo electrónico válido'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // 3. Validar contraseñas
-    if (passwordController.text != confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Las contraseñas no coinciden'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    if (passwordController.text.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('La contraseña debe tener al menos 6 caracteres'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    // Validar que las contraseñas coincidan
+    if (_passwordController.text != _confirmPasswordController.text) {
+      setState(() {
+        _errorMessage = 'Las contraseñas no coinciden';
+      });
       return;
     }
 
     setState(() {
-      isLoading = true;
+      _errorMessage = null;
     });
 
     try {
-      // Pasamos el rol seleccionado al controlador
-      await authController.register(
-        nameController.text,
-        emailController.text.trim(),
-        passwordController.text,
-        selectedRole!,
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      final success = await authProvider.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        fullName: _nameController.text.trim(),
+        role: _selectedRole!,
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('¡Cuenta creada exitosamente!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.pushReplacementNamed(context, AppRoutes.login);
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Registro exitoso'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // El AuthWrapper redirigirá automáticamente
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-      );
-    } finally {
       setState(() {
-        isLoading = false;
+        _errorMessage = 'Error al registrar: $e';
       });
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+
+    if (authProvider.isLoading) {
+      return const Scaffold(
+        body: LoadingWidget(message: 'Registrando...'),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Registrarse'),
+        backgroundColor: const Color(0xFFE65100),
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              const SizedBox(height: 16),
+              
+              // Nombre
+              CustomTextField(
+                controller: _nameController,
+                label: 'Nombre completo',
+                hint: 'Tu nombre completo',
+                prefixIcon: Icons.person_outlined,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Ingresa tu nombre';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Email
+              CustomTextField(
+                controller: _emailController,
+                label: 'Correo institucional',
+                hint: 'ejemplo@utvm.edu.mx',
+                prefixIcon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Ingresa tu correo';
+                  }
+                  if (!value.contains('@')) {
+                    return 'Correo inválido';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Contraseña
+              CustomTextField(
+                controller: _passwordController,
+                label: 'Contraseña',
+                hint: 'Mínimo 6 caracteres',
+                prefixIcon: Icons.lock_outlined,
+                obscureText: _obscurePassword,
+                suffixIcon: _obscurePassword
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+                onSuffixPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Ingresa una contraseña';
+                  }
+                  if (value.length < 6) {
+                    return 'Mínimo 6 caracteres';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Confirmar contraseña
+              CustomTextField(
+                controller: _confirmPasswordController,
+                label: 'Confirmar contraseña',
+                hint: 'Repite tu contraseña',
+                prefixIcon: Icons.lock_outlined,
+                obscureText: _obscureConfirmPassword,
+                suffixIcon: _obscureConfirmPassword
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+                onSuffixPressed: () {
+                  setState(() {
+                    _obscureConfirmPassword = !_obscureConfirmPassword;
+                  });
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Confirma tu contraseña';
+                  }
+                  if (value != _passwordController.text) {
+                    return 'Las contraseñas no coinciden';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Rol
+              DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  labelText: 'Rol',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                ),
+                value: _selectedRole,
+                items: const [
+                  DropdownMenuItem(
+                    value: 'student',
+                    child: Text('👨‍🎓 Estudiante'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'professor',
+                    child: Text('👨‍🏫 Profesor'),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedRole = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // Error
+              if (_errorMessage != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: Colors.red.shade700,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Botón Registrar
+              CustomButton(
+                text: 'Registrarse',
+                isLoading: authProvider.isLoading,
+                onPressed: _register,
+              ),
+              const SizedBox(height: 16),
+
+              // Login link
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '¿Ya tienes cuenta?',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pushReplacementNamed(context, '/login');
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: const Text(
+                      'Inicia Sesión',
+                      style: TextStyle(
+                        color: Color(0xFFE65100),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
