@@ -101,51 +101,66 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                     children: [
                       Icon(Icons.book, color: Colors.orange.shade700),
                       const SizedBox(width: 8),
-                      Text(
-                        _classData!['subject'],
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          _classData!['subject'],
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
+                  // Profesor
                   Row(
                     children: [
                       Icon(Icons.person, size: 16, color: Colors.grey.shade600),
                       const SizedBox(width: 4),
-                      Text(
-                        'Profesor: ${_classData!['professor_id']}',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 14,
+                      Expanded(
+                        child: Text(
+                          'Profesor: ${_classData!['professor_id']}',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
+                  // Cuatrimestre y Grupo
                   Row(
                     children: [
                       Icon(Icons.event_note, size: 16, color: Colors.grey.shade600),
                       const SizedBox(width: 4),
-                      Text(
-                        '${_classData!['term']} Cuatrimestre - Grupo ${_classData!['group_name']}',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 14,
+                      Expanded(
+                        child: Text(
+                          '${_classData!['term']} Cuatrimestre - Grupo ${_classData!['group_name']}',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
+                  // Código
                   Row(
                     children: [
                       Icon(Icons.vpn_key, size: 16, color: Colors.grey.shade600),
                       const SizedBox(width: 4),
-                      Text(
-                        'Código: ${_classData!['join_code']}',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 14,
+                      Expanded(
+                        child: Text(
+                          'Código: ${_classData!['join_code']}',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -217,6 +232,7 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Container(
@@ -244,11 +260,14 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
               children: [
                 Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade600),
                 const SizedBox(width: 4),
-                Text(
-                  'Límite: ${_formatDate(assignment['due_date'])}',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 13,
+                Expanded(
+                  child: Text(
+                    'Límite: ${_formatDate(assignment['due_date'])}',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 13,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -275,14 +294,12 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
               ),
             const SizedBox(height: 12),
 
-            // Botón de acción
             if (isActive)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
                     if (hasSubmission) {
-                      // Ver mi recetario entregado
                       Navigator.pushNamed(
                         context,
                         AppRoutes.studentMyRecipes,
@@ -292,7 +309,6 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                         },
                       );
                     } else {
-                      // Subir recetario
                       Navigator.pushNamed(
                         context,
                         AppRoutes.studentUploadRecipe,

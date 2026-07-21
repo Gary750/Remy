@@ -86,23 +86,32 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // CABECERA: texto + botón (corregido overflow)
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(Icons.school, color: Colors.grey.shade600),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Clases en las que estás inscrito',
-                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-                  ),
-                ],
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.school, color: Colors.grey.shade600),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Clases en las que estás inscrito',
+                        style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              CustomButton(
-                text: 'Unirse a clase',
-                onPressed: () => showJoinClassModal(context, onJoined: _loadClasses),
-                width: 150,
+              const SizedBox(width: 8),
+              // Botón flexible en lugar de ancho fijo
+              Flexible(
+                child: CustomButton(
+                  text: 'Unirse a clase',
+                  onPressed: () => showJoinClassModal(context, onJoined: _loadClasses),
+                  // eliminamos el width fijo para que se ajuste
+                ),
               ),
             ],
           ),
@@ -143,10 +152,20 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> {
   }
 
   Widget _buildGrid(int crossAxisCount) {
+    // Ajustamos el aspect ratio para dar más altura
+    double aspectRatio;
+    if (crossAxisCount == 1) {
+      aspectRatio = 1.8; // antes 2.5
+    } else if (crossAxisCount == 2) {
+      aspectRatio = 1.5;
+    } else {
+      aspectRatio = 1.2;
+    }
+
     return GridView.builder(
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        childAspectRatio: crossAxisCount == 1 ? 2.5 : 1.5,
+        childAspectRatio: aspectRatio,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
