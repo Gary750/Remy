@@ -84,9 +84,8 @@ class _MyGradesScreenState extends State<MyGradesScreen> {
       itemBuilder: (context, index) {
         final grade = grades[index];
         final assignment = grade['assignments'] as Map<String, dynamic>?;
-        final gradeData = grade['grades'] as Map<String, dynamic>?;
-        final score = gradeData?['score'] as double?;
-        final feedback = gradeData?['feedback'] as String? ?? 'Sin retroalimentación';
+        final classData = assignment?['classes'] as Map<String, dynamic>?;
+        final int? stars = grade['stars'];
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -110,76 +109,66 @@ class _MyGradesScreenState extends State<MyGradesScreen> {
                         ),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
+                    if (stars != null)
+                      Row(
+                        children: List.generate(5, (i) {
+                          return Icon(
+                            i < stars ? Icons.star : Icons.star_border,
+                            size: 18,
+                            color: Colors.amber,
+                          );
+                        }),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Sin calificar',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
-                      decoration: BoxDecoration(
-                        color: score != null && score >= 8
-                            ? Colors.green.shade100
-                            : score != null && score >= 6
-                                ? Colors.orange.shade100
-                                : Colors.red.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.book, size: 14, color: Colors.grey.shade700),
+                    const SizedBox(width: 4),
+                    Expanded(
                       child: Text(
-                        score != null ? score.toStringAsFixed(1) : 'Sin calificar',
+                        assignment?['title'] ?? 'Sin título',
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: score != null && score >= 8
-                              ? Colors.green.shade700
-                              : score != null && score >= 6
-                                  ? Colors.orange.shade700
-                                  : Colors.red.shade700,
+                          color: Colors.grey.shade700,
+                          fontSize: 14,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  '📚 ${assignment?['title'] ?? 'Sin título'}',
-                  style: TextStyle(
-                    color: Colors.grey.shade700,
-                    fontSize: 14,
-                  ),
-                ),
-                if (assignment != null)
-                  Text(
-                    '📖 ${assignment['classes']['subject'] ?? 'Sin materia'}',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 12,
-                    ),
-                  ),
-                if (feedback.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '💬 $feedback',
-                      style: TextStyle(
-                        color: Colors.grey.shade700,
-                        fontSize: 12,
+                if (classData != null)
+                  Row(
+                    children: [
+                      Icon(Icons.class_, size: 14, color: Colors.grey.shade600),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${classData['subject'] ?? 'Sin materia'} · Grupo ${classData['group_name'] ?? ''}',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-                if (gradeData?['graded_at'] != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Calificado: ${_formatDate(gradeData!['graded_at'])}',
-                      style: TextStyle(
-                        color: Colors.grey.shade500,
-                        fontSize: 11,
-                      ),
-                    ),
+                    ],
                   ),
               ],
             ),
@@ -187,14 +176,5 @@ class _MyGradesScreenState extends State<MyGradesScreen> {
         );
       },
     );
-  }
-
-  String _formatDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-    } catch (e) {
-      return dateStr;
-    }
   }
 }

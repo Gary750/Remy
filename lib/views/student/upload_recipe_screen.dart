@@ -9,8 +9,6 @@ import 'package:remy/views/shared/widgets/custom_text_field.dart';
 class UploadRecipeScreen extends StatefulWidget {
   final String assignmentId;
   final String classId;
-  /// Tipo forzado por la entrega ('Comida', 'Bebida' o 'Ambos').
-  /// Si es 'Ambos', el alumno elige entre los dos.
   final String recipeType;
 
   const UploadRecipeScreen({
@@ -45,8 +43,6 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
   Uint8List? pickedImageBytes;
   String? pickedImageName;
 
-  // Valores exactos del enum cooking_style en Supabase -- deben coincidir
-  // literalmente (incluye acentos y mayúsculas/minúsculas).
   final List<String> cookingStyles = [
     'Hervir',
     'Blanquear',
@@ -64,7 +60,6 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
     'Confitar',
   ];
 
-  // Lista dinámica de ingredientes -- se guarda como JSONB
   final List<Map<String, TextEditingController>> ingredientControllers = [];
 
   @override
@@ -113,7 +108,7 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Subir Receta'),
-        backgroundColor: Colors.orange,
+        backgroundColor: const Color(0xFFE65100),
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -494,7 +489,7 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('¡Receta publicada exitosamente!'),
+          content: Text('Receta publicada exitosamente'),
           backgroundColor: Colors.green,
         ),
       );

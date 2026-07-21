@@ -19,13 +19,18 @@ class AssignmentModel {
     required this.createdAt,
   });
 
+  // FIX: la tabla 'assignments' solo tiene UNA columna de tipo ('type'),
+  // que es el enum recipe_type (Comida/Bebida/Ambos). Antes este modelo
+  // esperaba una columna extra 'recipe_type' que no existe en el schema.
+  // Ahora 'recipeType' lee directamente de 'type', y 'type' se queda como
+  // una etiqueta interna fija ('recetario') que no se guarda en la BD.
   factory AssignmentModel.fromJson(Map<String, dynamic> json) {
     return AssignmentModel(
       id: json['id'] ?? '',
       classId: json['class_id'] ?? '',
       title: json['title'] ?? '',
-      type: json['type'] ?? 'recetario',
-      recipeType: json['recipe_type'] ?? 'Ambos',
+      type: 'recetario',
+      recipeType: json['type'] ?? 'Ambos',
       dueDate: DateTime.parse(json['due_date'] ?? DateTime.now().toIso8601String()),
       instructions: json['instructions'] ?? '',
       createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
@@ -37,8 +42,7 @@ class AssignmentModel {
       'id': id,
       'class_id': classId,
       'title': title,
-      'type': type,
-      'recipe_type': recipeType,
+      'type': recipeType, // única columna real
       'due_date': dueDate.toIso8601String(),
       'instructions': instructions,
       'created_at': createdAt.toIso8601String(),

@@ -48,7 +48,7 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Te has unido a la clase'),
+            content: Text('Te has unido a la clase'),
             backgroundColor: Colors.green,
           ),
         );
