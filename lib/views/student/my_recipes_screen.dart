@@ -3,7 +3,6 @@ import 'package:remy/controllers/recipe_controller.dart';
 import 'package:remy/views/shared/responsive_layout.dart';
 
 class MyRecipesScreen extends StatefulWidget {
-  /// Si se provee, la pantalla abre directo el detalle de esa receta.
   final String? assignmentId;
   final String? classId;
 
@@ -61,7 +60,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(showingDetail ? 'Mi Receta' : 'Mis Recetas'),
-        backgroundColor: Colors.orange,
+        backgroundColor: const Color(0xFFE65100),
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -324,7 +323,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
       color: Colors.grey[50],
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ExpansionTile(
-        leading: const Icon(Icons.list, color: Colors.orange),
+        leading: Icon(Icons.list, color: Colors.orange),
         title: const Text('Ingredientes', style: TextStyle(fontWeight: FontWeight.bold)),
         initiallyExpanded: true,
         children: ingredients.map<Widget>((ing) {
@@ -345,7 +344,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
       color: Colors.grey[50],
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ExpansionTile(
-        leading: const Icon(Icons.description, color: Colors.orange),
+        leading: Icon(Icons.description, color: Colors.orange),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         initiallyExpanded: initiallyExpanded,
         children: [

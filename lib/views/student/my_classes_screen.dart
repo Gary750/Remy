@@ -57,7 +57,7 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mis clases'),
-        backgroundColor: Colors.orange,
+        backgroundColor: const Color(0xFFE65100),
         foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
         actions: [
@@ -89,9 +89,15 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Clases en las que estás inscrito',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+              Row(
+                children: [
+                  Icon(Icons.school, color: Colors.grey.shade600),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Clases en las que estás inscrito',
+                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                  ),
+                ],
               ),
               CustomButton(
                 text: 'Unirse a clase',

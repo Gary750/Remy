@@ -50,7 +50,6 @@ class StudentController {
       final session = _supabase.supabase.auth.currentSession;
       if (session == null) return false;
 
-      // Buscar la clase por código
       final classResponse = await _supabase.supabase
           .from('classes')
           .select('id')
@@ -61,7 +60,6 @@ class StudentController {
 
       final classId = classResponse['id'];
 
-      // Verificar si ya está inscrito
       final existing = await _supabase.supabase
           .from('enrollments')
           .select()
@@ -71,7 +69,6 @@ class StudentController {
 
       if (existing != null) return false;
 
-      // Inscribir al estudiante
       await _supabase.supabase.from('enrollments').insert({
         'class_id': classId,
         'student_id': session.user.id,
@@ -184,6 +181,11 @@ class StudentController {
   }
 
   // ==================== CALIFICACIONES ====================
+  // FIX: 'grades' no tiene columnas score/feedback/graded_at -- el schema
+  // real solo tiene 'stars' (int 1-5). Tampoco existe una FK directa de
+  // 'grades' hacia 'recipes' para poder usar un embed anidado de PostgREST
+  // (grades se relaciona por (assignment_id, student_id)), así que se
+  // resuelve con una segunda consulta y se combina en Dart.
   Future<List<Map<String, dynamic>>> getMyGrades() async {
     try {
       final session = _supabase.supabase.auth.currentSession;
@@ -191,13 +193,14 @@ class StudentController {
 
       final userId = session.user.id;
 
-      final response = await _supabase.supabase
+      final recipesResponse = await _supabase.supabase
           .from('recipes')
           .select('''
             id,
             name,
             type,
             created_at,
+            assignment_id,
             assignments!inner (
               id,
               title,
@@ -207,17 +210,34 @@ class StudentController {
                 term,
                 group_name
               )
-            ),
-            grades!left (
-              score,
-              feedback,
-              graded_at
             )
           ''')
           .eq('student_id', userId)
           .order('created_at', ascending: false);
 
-      return List<Map<String, dynamic>>.from(response);
+      final recipes = List<Map<String, dynamic>>.from(recipesResponse);
+      if (recipes.isEmpty) return [];
+
+      final assignmentIds =
+          recipes.map((r) => r['assignment_id']).toSet().toList();
+
+      final gradesResponse = await _supabase.supabase
+          .from('grades')
+          .select('assignment_id, stars')
+          .eq('student_id', userId)
+          .inFilter('assignment_id', assignmentIds);
+
+      final gradesMap = {
+        for (final g in List<Map<String, dynamic>>.from(gradesResponse))
+          g['assignment_id']: g['stars']
+      };
+
+      return recipes
+          .map((r) => {
+                ...r,
+                'stars': gradesMap[r['assignment_id']],
+              })
+          .toList();
     } catch (e) {
       print('Error al obtener calificaciones: $e');
       return [];
@@ -226,7 +246,7 @@ class StudentController {
 
   Future<Map<String, dynamic>?> getGradeDetail(String recipeId) async {
     try {
-      final response = await _supabase.supabase
+      final recipe = await _supabase.supabase
           .from('recipes')
           .select('''
             *,
@@ -238,17 +258,24 @@ class StudentController {
                 term,
                 group_name
               )
-            ),
-            grades!left (
-              score,
-              feedback,
-              graded_at
             )
           ''')
           .eq('id', recipeId)
           .maybeSingle();
 
-      return response;
+      if (recipe == null) return null;
+
+      final grade = await _supabase.supabase
+          .from('grades')
+          .select('stars')
+          .eq('assignment_id', recipe['assignment_id'])
+          .eq('student_id', recipe['student_id'])
+          .maybeSingle();
+
+      return {
+        ...recipe,
+        'stars': grade?['stars'],
+      };
     } catch (e) {
       print('Error al obtener detalle de calificación: $e');
       return null;
@@ -304,32 +331,13 @@ class StudentController {
   }
 
   // ==================== DETALLE DE CLASE (ESTUDIANTE) ====================
+  // FIX: se quitó el embed anidado assignments->recipes->grades(score) que
+  // no existe y que además no se estaba usando en ninguna pantalla.
   Future<Map<String, dynamic>?> getClassDetail(String classId) async {
     try {
       final response = await _supabase.supabase
           .from('classes')
-          .select('''
-            *,
-            assignments (
-              *,
-              recipes (
-                id,
-                student_id,
-                name,
-                created_at,
-                grades (
-                  score
-                )
-              )
-            ),
-            enrollments (
-              student_id,
-              profiles!inner (
-                full_name,
-                email
-              )
-            )
-          ''')
+          .select()
           .eq('id', classId)
           .maybeSingle();
 
@@ -340,8 +348,18 @@ class StudentController {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getClassAssignments(String classId) async {
+  // FIX: se quitó el embed grades(score) inválido. Además, antes se
+  // regresaban las recetas de TODOS los alumnos de la clase dentro de cada
+  // assignment, lo que hacía que "Entregado" apareciera aunque el alumno
+  // actual no hubiera subido nada (bastaba con que un compañero sí lo
+  // hubiera hecho). Ahora se filtran solo las recetas del alumno en sesión
+  // y se agrega su calificación (stars) por separado.
+  Future<List<Map<String, dynamic>>> getClassAssignments(
+      String classId) async {
     try {
+      final session = _supabase.supabase.auth.currentSession;
+      final userId = session?.user.id;
+
       final response = await _supabase.supabase
           .from('assignments')
           .select('''
@@ -349,16 +367,41 @@ class StudentController {
             recipes (
               id,
               student_id,
-              created_at,
-              grades (
-                score
-              )
+              created_at
             )
           ''')
           .eq('class_id', classId)
           .order('created_at', ascending: false);
 
-      return List<Map<String, dynamic>>.from(response);
+      final assignments = List<Map<String, dynamic>>.from(response);
+      if (assignments.isEmpty) return [];
+
+      Map<dynamic, dynamic> gradesMap = {};
+      if (userId != null) {
+        final assignmentIds = assignments.map((a) => a['id']).toList();
+        final gradesResponse = await _supabase.supabase
+            .from('grades')
+            .select('assignment_id, stars')
+            .eq('student_id', userId)
+            .inFilter('assignment_id', assignmentIds);
+        gradesMap = {
+          for (final g in List<Map<String, dynamic>>.from(gradesResponse))
+            g['assignment_id']: g['stars']
+        };
+      }
+
+      return assignments.map((a) {
+        final allRecipes = List<Map<String, dynamic>>.from(a['recipes'] ?? []);
+        final myRecipes = userId == null
+            ? <Map<String, dynamic>>[]
+            : allRecipes.where((r) => r['student_id'] == userId).toList();
+
+        return {
+          ...a,
+          'recipes': myRecipes, // solo las del alumno en sesión
+          'stars': gradesMap[a['id']],
+        };
+      }).toList();
     } catch (e) {
       print('Error al obtener entregas de clase: $e');
       return [];
@@ -371,22 +414,28 @@ class StudentController {
     try {
       final session = _supabase.supabase.auth.currentSession;
       if (session == null) return null;
+      final userId = session.user.id;
 
-      final response = await _supabase.supabase
+      final recipe = await _supabase.supabase
           .from('recipes')
-          .select('''
-            *,
-            grades (
-              score,
-              feedback,
-              graded_at
-            )
-          ''')
+          .select()
           .eq('assignment_id', assignmentId)
-          .eq('student_id', session.user.id)
+          .eq('student_id', userId)
           .maybeSingle();
 
-      return response;
+      if (recipe == null) return null;
+
+      final grade = await _supabase.supabase
+          .from('grades')
+          .select('stars')
+          .eq('assignment_id', assignmentId)
+          .eq('student_id', userId)
+          .maybeSingle();
+
+      return {
+        ...recipe,
+        'stars': grade?['stars'],
+      };
     } catch (e) {
       print('Error al obtener mi entrega: $e');
       return null;
@@ -394,6 +443,11 @@ class StudentController {
   }
 
   // ==================== SUBIR RECETARIO COMPLETO ====================
+  // NOTA: este método no está siendo llamado por ninguna pantalla en este
+  // momento (upload_recipe_screen.dart usa RecipeController.createRecipe,
+  // una receta a la vez). Si van a usar "recetario con varias recetas",
+  // revisen que 'ingredients' vaya como List/Map real (jsonb), no String,
+  // igual que en upload_recipe_screen.dart.
   Future<bool> submitRecipes({
     required String assignmentId,
     required List<Map<String, dynamic>> recipes,
@@ -402,14 +456,12 @@ class StudentController {
       final session = _supabase.supabase.auth.currentSession;
       if (session == null) return false;
 
-      // Eliminar recetas existentes (si las hay)
       await _supabase.supabase
           .from('recipes')
           .delete()
           .eq('assignment_id', assignmentId)
           .eq('student_id', session.user.id);
 
-      // Insertar nuevas recetas
       for (final recipe in recipes) {
         await _supabase.supabase.from('recipes').insert({
           'assignment_id': assignmentId,

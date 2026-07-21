@@ -19,7 +19,6 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
   bool _isLoading = true;
   Map<String, dynamic>? _classData;
   List<Map<String, dynamic>> _assignments = [];
-  Map<String, dynamic>? _mySubmissions;
 
   @override
   void initState() {
@@ -98,34 +97,58 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '📚 ${_classData!['subject']}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Icon(Icons.book, color: Colors.orange.shade700),
+                      const SizedBox(width: 8),
+                      Text(
+                        _classData!['subject'],
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '👨‍🏫 Profesor: ${_classData!['professor_id']}',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 14,
-                    ),
+                  Row(
+                    children: [
+                      Icon(Icons.person, size: 16, color: Colors.grey.shade600),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Profesor: ${_classData!['professor_id']}',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    '📋 ${_classData!['term']} Cuatrimestre - Grupo ${_classData!['group_name']}',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 14,
-                    ),
+                  Row(
+                    children: [
+                      Icon(Icons.event_note, size: 16, color: Colors.grey.shade600),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_classData!['term']} Cuatrimestre - Grupo ${_classData!['group_name']}',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    '🔑 Código: ${_classData!['join_code']}',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 14,
-                    ),
+                  Row(
+                    children: [
+                      Icon(Icons.vpn_key, size: 16, color: Colors.grey.shade600),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Código: ${_classData!['join_code']}',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -133,12 +156,18 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
             const SizedBox(height: 20),
 
             // Entregas
-            const Text(
-              '📝 Entregas',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                Icon(Icons.assignment, color: Colors.orange.shade700),
+                const SizedBox(width: 8),
+                const Text(
+                  'Entregas',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
 
@@ -211,22 +240,37 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              '📅 Límite: ${_formatDate(assignment['due_date'])}',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 13,
-              ),
+            Row(
+              children: [
+                Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade600),
+                const SizedBox(width: 4),
+                Text(
+                  'Límite: ${_formatDate(assignment['due_date'])}',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
             ),
             if (assignment['instructions'] != null && assignment['instructions'].isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  '📝 ${assignment['instructions']}',
-                  style: TextStyle(
-                    color: Colors.grey.shade700,
-                    fontSize: 13,
-                  ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.note, size: 14, color: Colors.grey.shade700),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        assignment['instructions'],
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             const SizedBox(height: 12),
@@ -241,7 +285,7 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                       // Ver mi recetario entregado
                       Navigator.pushNamed(
                         context,
-                        AppRoutes.myRecipes,
+                        AppRoutes.studentMyRecipes,
                         arguments: {
                           'assignmentId': assignment['id'],
                           'classId': widget.classId,
@@ -251,10 +295,11 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                       // Subir recetario
                       Navigator.pushNamed(
                         context,
-                        AppRoutes.uploadRecipe,
+                        AppRoutes.studentUploadRecipe,
                         arguments: {
                           'assignmentId': assignment['id'],
                           'classId': widget.classId,
+                          'recipeType': assignmentModel.recipeType,
                         },
                       );
                     }
@@ -269,8 +314,8 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                   ),
                   child: Text(
                     hasSubmission 
-                        ? '📖 Ver mi recetario' 
-                        : '📤 Subir recetario',
+                        ? 'Ver mi recetario' 
+                        : 'Subir recetario',
                     style: const TextStyle(color: Colors.white),
                   ),
                 ),
@@ -280,10 +325,10 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                 padding: const EdgeInsets.only(top: 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                    Icon(Icons.check_circle, color: Colors.green, size: 18),
                     const SizedBox(width: 8),
                     Text(
-                      '✅ Entregado',
+                      'Entregado',
                       style: TextStyle(
                         color: Colors.green.shade700,
                         fontWeight: FontWeight.w500,

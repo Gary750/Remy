@@ -42,19 +42,28 @@ class SupabaseService {
     return response;
   }
 
+  // FIX: ya existe un trigger en Supabase (on_auth_user_created) que crea
+  // automáticamente la fila en 'profiles' al registrarse (y asigna el rol
+  // según el dominio del correo). Insertar aquí también con .insert()
+  // choca con la llave primaria (profiles.id ya existe) y el registro
+  // falla. Se cambia a .upsert() para que funcione exista o no la fila
+  // creada por el trigger, y de paso confirmamos full_name/role/email.
   Future<AuthResponse> signUp(String email, String password, String fullName, String role) async {
     final response = await client.auth.signUp(
       email: email,
       password: password,
+      data: {
+        'full_name': fullName,
+        'role': role,
+      },
     );
 
     if (response.user != null) {
-      await client.from('profiles').insert({
+      await client.from('profiles').upsert({
         'id': response.user!.id,
         'full_name': fullName,
         'email': email,
         'role': role,
-        'created_at': DateTime.now().toIso8601String(),
       });
     }
 
@@ -140,7 +149,6 @@ class SupabaseService {
 
   // ==================== ✅ GENERAR CÓDIGO CON ALEATORIOS REALES ====================
   String _generateJoinCode(String subject, String term, String groupName) {
-    // Extraer primeras letras de la materia (3 letras máximo)
     String subjectCode = '';
     final words = subject.split(' ');
     if (words.length >= 2) {
@@ -152,10 +160,8 @@ class SupabaseService {
     if (subjectCode.length > 3) subjectCode = subjectCode.substring(0, 3);
     if (subjectCode.length < 2) subjectCode = subjectCode.padRight(2, 'X');
 
-    // Número del cuatrimestre
     final termNum = RegExp(r'(\d+)').firstMatch(term)?.group(1) ?? '0';
 
-    // ✅ USAR Random() PARA GENERAR 4 CARACTERES ALEATORIOS
     final random = Random();
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     
@@ -182,6 +188,14 @@ class SupabaseService {
     }
   }
 
+  // FIX: la tabla 'assignments' solo tiene UNA columna de tipo ('type'),
+  // que ya es el enum recipe_type (Comida/Bebida/Ambos). El código anterior
+  // mandaba 'type': 'recetario' (string fijo que probablemente no es un
+  // valor válido del enum) Y ADEMÁS 'recipe_type' (columna que no existe
+  // en el schema). Esto tronaba igual que pasó antes con cooking_style.
+  // Verifica en Supabase los valores exactos del enum de 'type' en
+  // 'assignments' -- si no coinciden con lo que mandas desde la UI
+  // (Comida/Bebida/Ambos), va a volver a tronar.
   Future<Map<String, dynamic>> createAssignment({
     required String classId,
     required String title,
@@ -192,8 +206,7 @@ class SupabaseService {
     final data = {
       'class_id': classId,
       'title': title,
-      'type': 'recetario',
-      'recipe_type': recipeType,
+      'type': recipeType, // única columna real en la tabla
       'due_date': dueDate.toIso8601String(),
       'instructions': instructions ?? '',
       'created_at': DateTime.now().toIso8601String(),
