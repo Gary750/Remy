@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:remy/providers/auth_provider.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'package:remy/views/shared/widgets/custom_text_field.dart';
+import 'package:remy/views/auth/auth_wrapper.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,6 +18,13 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _errorMessage = null;
+    _isLoading = false;
+  }
 
   @override
   void dispose() {
@@ -34,7 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // ✅ Limpiar error anterior y mostrar loading
+    // Limpiar error anterior y mostrar loading
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -43,29 +51,42 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       
-      // ✅ Intentar login
+      // Intentar login
       final success = await authProvider.signIn(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
-      // ✅ Si falla, mostrar el error del provider
-      if (!success && mounted) {
+      // Si el login fue exitoso, redirigir al AuthWrapper
+      if (success && mounted) {
+        print('✅ Login exitoso, redirigiendo a AuthWrapper...');
+        
+        // FORZAR RECONSTRUCCIÓN COMPLETA
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const AuthWrapper()),
+          (route) => false,
+        );
+        return;
+      }
+      
+      // Si falla, mostrar el error del provider
+      if (mounted) {
         setState(() {
           _errorMessage = authProvider.error ?? '❌ Credenciales incorrectas';
           _isLoading = false;
         });
       }
-      // ✅ Si es exitoso, NO llamamos a setState, el AuthWrapper redirige
       
     } catch (e) {
-      // ✅ Error inesperado
+      // Error inesperado
       if (mounted) {
         setState(() {
           _errorMessage = '❌ Error al iniciar sesión. Intenta de nuevo.';
           _isLoading = false;
         });
       }
+      print('❌ Error en login: $e');
     }
   }
 
@@ -73,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
 
-    // ✅ Si el AuthProvider está cargando, mostrar loading
+    // Si el AuthProvider está cargando, mostrar loading
     if (authProvider.isLoading) {
       return const Scaffold(
         body: Center(
@@ -167,10 +188,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         hint: 'ejemplo@utvm.edu.mx',
                         prefixIcon: Icons.email_outlined,
                         keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
                         onChanged: (_) {
                           if (_errorMessage != null) {
                             setState(() => _errorMessage = null);
                           }
+                        },
+                        onSubmitted: (_) {
+                          FocusScope.of(context).nextFocus();
                         },
                       ),
                       const SizedBox(height: 16),
@@ -182,6 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         hint: '••••••••',
                         prefixIcon: Icons.lock_outlined,
                         obscureText: _obscurePassword,
+                        textInputAction: TextInputAction.done,
                         suffixIcon: _obscurePassword
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
@@ -195,10 +221,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             setState(() => _errorMessage = null);
                           }
                         },
+                        onSubmitted: (_) => _login(),
                       ),
                       const SizedBox(height: 8),
 
-                      // ✅ Error message (si existe)
+                      // Error message
                       if (_errorMessage != null)
                         Container(
                           padding: const EdgeInsets.all(12),
@@ -251,7 +278,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           TextButton(
                             onPressed: () {
-                              Navigator.pushNamed(context, '/register');
+                              Navigator.pushReplacementNamed(context, '/register');
                             },
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(horizontal: 8),

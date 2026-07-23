@@ -14,6 +14,8 @@ class CustomTextField extends StatelessWidget {
   final bool readOnly;
   final VoidCallback? onTap;
   final int? maxLines;
+  final TextInputAction? textInputAction;
+  final void Function(String)? onSubmitted; // 🔥 SE MANTIENE
 
   const CustomTextField({
     super.key,
@@ -30,6 +32,8 @@ class CustomTextField extends StatelessWidget {
     this.readOnly = false,
     this.onTap,
     this.maxLines = 1,
+    this.textInputAction,
+    this.onSubmitted, // 🔥 SE MANTIENE
   });
 
   @override
@@ -55,6 +59,8 @@ class CustomTextField extends StatelessWidget {
           readOnly: readOnly,
           onTap: onTap,
           maxLines: maxLines,
+          textInputAction: textInputAction ?? TextInputAction.done,
+          onFieldSubmitted: onSubmitted, // 🔥 CAMBIO: onSubmitted → onFieldSubmitted
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
