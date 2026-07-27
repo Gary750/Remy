@@ -19,7 +19,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   final _nameController = TextEditingController();
   
-  String? _selectedRole = 'student';
+  String? _selectedRole = 'alumno';
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String? _errorMessage;
@@ -207,11 +207,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 value: _selectedRole,
                 items: const [
                   DropdownMenuItem(
-                    value: 'student',
+                    value: 'alumno',
                     child: Text('👨‍🎓 Estudiante'),
                   ),
                   DropdownMenuItem(
-                    value: 'professor',
+                    value: 'profesor',
                     child: Text('👨‍🏫 Profesor'),
                   ),
                 ],

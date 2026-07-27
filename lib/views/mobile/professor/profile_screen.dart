@@ -255,7 +255,7 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
   String _getRoleDisplay(String? role) {
     if (role == 'profesor') {
       return '👨‍🏫 Profesor';
-    } else if (role == 'student') {
+    } else if (role == 'alumno') {
       return '👨‍🎓 Estudiante';
     } else {
       return '👤 Usuario';
