@@ -34,13 +34,17 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
     try {
       final data = await recipeController.getMyRecipes();
       setState(() {
-        recipes = data;
         if (widget.assignmentId != null) {
-          final match = recipes.firstWhere(
-            (r) => r['assignment_id'] == widget.assignmentId,
-            orElse: () => {},
-          );
-          selectedRecipeId = match.isNotEmpty ? match['id'] : null;
+          // Filtrar solo las recetas de esta entrega
+          recipes = data
+              .where((r) => r['assignment_id'] == widget.assignmentId)
+              .toList();
+          // Si solo hay una receta, ir directo al detalle
+          if (recipes.length == 1) {
+            selectedRecipeId = recipes.first['id'];
+          }
+        } else {
+          recipes = data;
         }
       });
     } catch (e) {

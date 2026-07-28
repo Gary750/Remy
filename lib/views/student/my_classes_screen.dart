@@ -54,29 +54,14 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mis clases'),
-        backgroundColor: const Color(0xFFE65100),
-        foregroundColor: Colors.white,
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              Navigator.pushNamed(context, AppRoutes.studentProfile);
-            },
-            tooltip: 'Mi Perfil',
-          ),
-        ],
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ResponsiveLayout(
-              mobile: _buildContent(crossAxisCount: 1),
-              tablet: _buildContent(crossAxisCount: 2),
-              desktop: _buildContent(crossAxisCount: 3),
-            ),
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return ResponsiveLayout(
+      mobile: _buildContent(crossAxisCount: 1),
+      tablet: _buildContent(crossAxisCount: 2),
+      desktop: _buildContent(crossAxisCount: 3),
     );
   }
 
