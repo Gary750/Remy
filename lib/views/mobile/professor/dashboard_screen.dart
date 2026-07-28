@@ -21,7 +21,9 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
   }
 
   void _loadData() async {
