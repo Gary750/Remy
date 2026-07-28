@@ -15,7 +15,10 @@ class EnrollmentProvider extends ChangeNotifier {
   Future<void> loadStudents(String classId) async {
     _isLoading = true;
     _error = null;
-    notifyListeners();
+    // Postergar la notificación para evitar conflictos si se llama durante build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_isLoading) notifyListeners();
+    });
 
     try {
       _students = await _supabase.getStudentsByClass(classId);
