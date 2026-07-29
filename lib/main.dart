@@ -19,7 +19,7 @@ import 'package:remy/views/mobile/professor/profile_screen.dart';
 import 'package:remy/views/mobile/professor/student_recipe_screen.dart';
 
 // ==================== PANTALLAS DE ESTUDIANTE ====================
-import 'package:remy/views/student/my_classes_screen.dart';
+import 'package:remy/views/student/student_dashboard_screen.dart';
 import 'package:remy/views/student/student_class_detail_screen.dart';
 import 'package:remy/views/student/upload_recipe_screen.dart';
 import 'package:remy/views/student/my_recipes_screen.dart';
@@ -85,7 +85,7 @@ class MyApp extends StatelessWidget {
           AppRoutes.professorProfile: (context) => const ProfessorProfileScreen(),
 
           // ========== ESTUDIANTE ==========
-          AppRoutes.studentDashboard: (context) => const StudentMyClassesScreen(),
+          AppRoutes.studentDashboard: (context) => const StudentDashboardScreen(),
           AppRoutes.studentMyRecipes: (context) => const MyRecipesScreen(),
           AppRoutes.studentSearchRecipes: (context) => const SearchRecipesScreen(),
           AppRoutes.studentMyGrades: (context) => const MyGradesScreen(),
@@ -194,7 +194,7 @@ class AuthWrapper extends StatelessWidget {
     if (user?.role == 'profesor') {
       return const ProfessorDashboardScreen();
     } else {
-      return const StudentMyClassesScreen();
+      return const StudentDashboardScreen();
     }
   }
 }

@@ -18,7 +18,9 @@ class AssignmentProvider extends ChangeNotifier {
   Future<void> loadAssignments(String classId) async {
     _isLoading = true;
     _error = null;
-    notifyListeners();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_isLoading) notifyListeners();
+    });
 
     try {
       final data = await _supabase.getClassAssignments(classId);

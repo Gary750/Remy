@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:remy/providers/auth_provider.dart';
 import 'package:remy/services/supabase_service.dart';
+import 'package:remy/services/storage_service.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'package:remy/views/shared/widgets/custom_text_field.dart';
 import 'package:remy/views/shared/widgets/loading_widget.dart';
@@ -56,26 +57,60 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
     super.dispose();
   }
 
+  final StorageService _storageService = StorageService();
+
   Future<void> _pickImage() async {
     try {
       final picker = ImagePicker();
-      final image = await picker.pickImage(source: ImageSource.gallery);
+      final image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 80,
+      );
       
       if (image != null) {
+        setState(() => _isLoading = true);
+
+        final bytes = await image.readAsBytes();
+        final fileName = image.name;
+
+        // Subir al bucket de avatars
+        final url = await _storageService.uploadAvatar(bytes, fileName);
+
+        // Actualizar avatar_url en la tabla profiles
+        final userId = context.read<AuthProvider>().currentUser!.id;
+        await _supabase.supabase.from('profiles').update({
+          'avatar_url': url,
+        }).eq('id', userId);
+
+        // Refrescar el perfil en el provider
+        await context.read<AuthProvider>().loadUserProfile(userId);
+
+        setState(() {
+          _avatarUrl = url;
+          _isLoading = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Foto de perfil actualizada'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Funcionalidad de subir foto en desarrollo'),
-            backgroundColor: Colors.orange,
+          SnackBar(
+            content: Text('Error al subir foto: $e'),
+            backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al seleccionar imagen: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
