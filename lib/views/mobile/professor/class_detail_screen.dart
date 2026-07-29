@@ -3,10 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:remy/models/assignment_model.dart';
 import 'package:remy/providers/assignment_provider.dart';
 import 'package:remy/providers/enrollment_provider.dart';
-import 'package:remy/services/supabase_service.dart'; // ✅ IMPORTACIÓN AGREGADA
+import 'package:remy/services/supabase_service.dart';
 import 'package:remy/views/mobile/professor/create_assignment_screen.dart';
 import 'package:remy/views/mobile/professor/student_recipe_screen.dart';
 import 'package:remy/views/shared/widgets/loading_widget.dart';
+import 'package:flutter/services.dart';
 
 class ClassDetailScreen extends StatefulWidget {
   final String classId;
@@ -29,7 +30,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
   List<Map<String, dynamic>> _students = [];
   bool _isLoading = true;
   String? _error;
-  Map<String, dynamic>? _classData;
+  String? _classCode;
 
   @override
   void initState() {
@@ -52,6 +53,17 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       final assignmentProvider = Provider.of<AssignmentProvider>(context, listen: false);
       await assignmentProvider.loadAssignments(widget.classId);
 
+      final supabase = SupabaseService().supabase;
+      final classData = await supabase
+          .from('classes')
+          .select('join_code')
+          .eq('id', widget.classId)
+          .maybeSingle();
+      
+      if (classData != null) {
+        _classCode = classData['join_code'];
+      }
+
       final studentsData = enrollmentProvider.students;
       
       final List<Map<String, dynamic>> processed = [];
@@ -59,7 +71,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         final student = studentsData[i];
         final profile = student['profiles'] as Map<String, dynamic>;
         
-        // ✅ DATOS SIMULADOS (SIN LLAMAR A SUPABASE PARA EVITAR ERRORES)
         final statuses = ['Entregado', 'Pendiente', 'Entregado', 'No entregado'];
         final matriculas = ['GAM-2021-047', 'GAM-2021-053', 'GAM-2021-061', 'GAM-2021-039'];
         final calificaciones = [4.5, 3.0, 0, 4.0];
@@ -84,6 +95,26 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         _error = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  void _copyClassCode() {
+    if (_classCode != null && _classCode!.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: _classCode!));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('📋 Código "$_classCode" copiado al portapapeles'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⚠️ No hay código disponible'),
+          backgroundColor: Colors.orange,
+        ),
+      );
     }
   }
 
@@ -606,29 +637,48 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CreateAssignmentScreen(
-                classId: widget.classId,
+      // ========== BOTONES FLOTANTES ==========
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // ✅ BOTÓN COPIAR CÓDIGO
+          if (_classCode != null && _classCode!.isNotEmpty)
+            FloatingActionButton(
+              heroTag: 'copiar_codigo',
+              onPressed: _copyClassCode,
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFFE65100),
+              elevation: 2,
+              child: const Icon(Icons.copy, color: Color(0xFFE65100)),
+            ),
+          const SizedBox(height: 12),
+          // ✅ BOTÓN NUEVA ENTREGA
+          FloatingActionButton.extended(
+            heroTag: 'nueva_entrega',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CreateAssignmentScreen(
+                    classId: widget.classId,
+                  ),
+                ),
+              ).then((_) => _loadData());
+            },
+            backgroundColor: const Color(0xFFE65100),
+            icon: const Icon(Icons.add, color: Colors.white, size: 22),
+            label: const Text(
+              'Nueva entrega',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
               ),
             ),
-          ).then((_) => _loadData());
-        },
-        backgroundColor: const Color(0xFFE65100),
-        icon: const Icon(Icons.add, color: Colors.white, size: 22),
-        label: const Text(
-          'Nueva entrega',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
           ),
-        ),
+        ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
