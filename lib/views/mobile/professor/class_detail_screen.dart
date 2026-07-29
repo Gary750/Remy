@@ -31,6 +31,9 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
   bool _isLoading = true;
   String? _error;
   String? _classCode;
+  AssignmentModel? _activeAssignment;
+
+  final SupabaseService _supabase = SupabaseService();
 
   @override
   void initState() {
@@ -38,6 +41,26 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
+  }
+
+  String _toSafeString(dynamic value) {
+    if (value == null) return '';
+    if (value is String) return value;
+    try {
+      return value.toString();
+    } catch (e) {
+      return '';
+    }
+  }
+
+  Map<String, dynamic> _extractProfile(dynamic profileData) {
+    if (profileData == null) return {};
+    if (profileData is Map<String, dynamic>) return profileData;
+    if (profileData is List && profileData.isNotEmpty) {
+      final first = profileData.first;
+      if (first is Map<String, dynamic>) return first;
+    }
+    return {};
   }
 
   Future<void> _loadData() async {
@@ -52,9 +75,9 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       
       final assignmentProvider = Provider.of<AssignmentProvider>(context, listen: false);
       await assignmentProvider.loadAssignments(widget.classId);
+      _activeAssignment = assignmentProvider.activeAssignment;
 
-      final supabase = SupabaseService().supabase;
-      final classData = await supabase
+      final classData = await _supabase.supabase
           .from('classes')
           .select('join_code')
           .eq('id', widget.classId)
@@ -65,23 +88,41 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       }
 
       final studentsData = enrollmentProvider.students;
-      
       final List<Map<String, dynamic>> processed = [];
-      for (var i = 0; i < studentsData.length; i++) {
-        final student = studentsData[i];
-        final profile = student['profiles'] as Map<String, dynamic>;
+
+      for (var student in studentsData) {
+        final profile = _extractProfile(student['profiles']);
+        final studentId = _toSafeString(student['student_id']);
         
-        final statuses = ['Entregado', 'Pendiente', 'Entregado', 'No entregado'];
-        final matriculas = ['GAM-2021-047', 'GAM-2021-053', 'GAM-2021-061', 'GAM-2021-039'];
-        final calificaciones = [4.5, 3.0, 0, 4.0];
+        if (_activeAssignment == null) {
+          processed.add({
+            'student_id': studentId,
+            'full_name': _toSafeString(profile['full_name']),
+            'email': _toSafeString(profile['email']),
+            'status': 'Sin entrega activa',
+            'matricula': await _getStudentMatricula(studentId),
+            'calificacion': 0.0,
+            'submission_date': null,
+            'has_submission': false,
+          });
+          continue;
+        }
+        
+        final submission = await _getStudentSubmission(studentId);
+        final hasSubmission = submission != null;
+        final status = hasSubmission ? 'Entregado' : 'Pendiente';
+        final grade = hasSubmission ? await _getStudentGrade(studentId) : 0.0;
+        final submissionDate = hasSubmission ? submission['created_at'] : null;
         
         processed.add({
-          'student_id': student['student_id'],
-          'full_name': profile['full_name'] ?? 'Sin nombre',
-          'email': profile['email'] ?? '',
-          'status': statuses[i % statuses.length],
-          'matricula': matriculas[i % matriculas.length],
-          'calificacion': calificaciones[i % calificaciones.length],
+          'student_id': studentId,
+          'full_name': _toSafeString(profile['full_name']),
+          'email': _toSafeString(profile['email']),
+          'status': status,
+          'matricula': await _getStudentMatricula(studentId),
+          'calificacion': grade,
+          'submission_date': submissionDate,
+          'has_submission': hasSubmission,
         });
       }
       
@@ -98,21 +139,87 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     }
   }
 
+  Future<Map<String, dynamic>?> _getStudentSubmission(String studentId) async {
+    if (_activeAssignment == null) return null;
+    
+    try {
+      final response = await _supabase.supabase
+          .from('recipes')
+          .select('id, created_at')
+          .eq('assignment_id', _activeAssignment!.id)
+          .eq('student_id', studentId)
+          .maybeSingle();
+      
+      return response;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<String> _getStudentStatus(String studentId) async {
+    if (_activeAssignment == null) return 'No entregado';
+    
+    try {
+      final response = await _supabase.supabase
+          .from('recipes')
+          .select('id')
+          .eq('assignment_id', _activeAssignment!.id)
+          .eq('student_id', studentId)
+          .maybeSingle();
+      
+      return response != null ? 'Entregado' : 'Pendiente';
+    } catch (e) {
+      return 'Pendiente';
+    }
+  }
+
+  Future<double> _getStudentGrade(String studentId) async {
+    if (_activeAssignment == null) return 0.0;
+    
+    try {
+      final response = await _supabase.supabase
+          .from('grades')
+          .select('stars')
+          .eq('assignment_id', _activeAssignment!.id)
+          .eq('student_id', studentId)
+          .maybeSingle();
+      
+      if (response != null && response['stars'] != null) {
+        return (response['stars'] as num).toDouble();
+      }
+      return 0.0;
+    } catch (e) {
+      return 0.0;
+    }
+  }
+
+  Future<String> _getStudentMatricula(String studentId) async {
+    final hash = studentId.hashCode.abs() % 10000;
+    return 'GAM-2021-${hash.toString().padLeft(4, '0')}';
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return '—';
+    try {
+      final date = DateTime.parse(dateStr);
+      final day = date.day.toString().padLeft(2, '0');
+      final month = date.month.toString().padLeft(2, '0');
+      final hour = date.hour.toString().padLeft(2, '0');
+      final minute = date.minute.toString().padLeft(2, '0');
+      return '$day/$month - $hour:$minute';
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
   void _copyClassCode() {
     if (_classCode != null && _classCode!.isNotEmpty) {
       Clipboard.setData(ClipboardData(text: _classCode!));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('📋 Código "$_classCode" copiado al portapapeles'),
+          content: Text('📋 Código "$_classCode" copiado'),
           backgroundColor: Colors.green,
           duration: const Duration(seconds: 2),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('⚠️ No hay código disponible'),
-          backgroundColor: Colors.orange,
         ),
       );
     }
@@ -135,6 +242,8 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         matchesFilter = status == 'Pendiente';
       } else if (_filterStatus == 'No entregados') {
         matchesFilter = status == 'No entregado';
+      } else if (_filterStatus == 'Sin entrega') {
+        matchesFilter = status == 'Sin entrega activa';
       }
 
       return matchesSearch && matchesFilter;
@@ -153,6 +262,8 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         return Colors.orange;
       case 'No entregado':
         return Colors.red;
+      case 'Sin entrega activa':
+        return Colors.grey;
       default:
         return Colors.grey;
     }
@@ -166,6 +277,8 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         return '⏳';
       case 'No entregado':
         return '❌';
+      case 'Sin entrega activa':
+        return '📌';
       default:
         return '📌';
     }
@@ -218,6 +331,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     final entregados = _countByStatus('Entregado');
     final pendientes = _countByStatus('Pendiente');
     final noEntregados = _countByStatus('No entregado');
+    final sinEntrega = _countByStatus('Sin entrega activa');
     final filteredStudents = _filteredStudents;
     final daysRemaining = activeAssignment != null 
         ? activeAssignment.dueDate.difference(DateTime.now()).inDays 
@@ -261,7 +375,140 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ========== ESTADÍSTICAS ==========
+                  if (activeAssignment != null)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade200,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.task_alt,
+                                  color: Colors.green.shade700,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '📝 ${activeAssignment.title}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.timer_outlined,
+                                          size: 14,
+                                          color: Colors.green.shade700,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Vence en: ${activeAssignment.timeRemaining}',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.green.shade700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.schedule_outlined,
+                                size: 14,
+                                color: Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Límite: ${_formatDate(activeAssignment.dueDate.toIso8601String())}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (activeAssignment.instructions.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.note_outlined,
+                                    size: 14,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      activeAssignment.instructions,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.grey.shade600,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'No hay entregas activas. Crea una nueva entrega para ver el progreso de los alumnos.',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   Row(
                     children: [
                       _buildStatCard(
@@ -274,7 +521,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                       _buildStatCard(
                         icon: Icons.check_circle_outline,
                         value: entregados.toString(),
-                        label: 'Han entregado',
+                        label: 'Entregados',
                         color: Colors.green,
                       ),
                       const SizedBox(width: 12),
@@ -286,76 +533,15 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                       ),
                       const SizedBox(width: 12),
                       _buildStatCard(
-                        icon: Icons.timer_outlined,
-                        value: daysRemaining > 0 ? '$daysRemaining' : '0',
-                        label: 'Días restantes',
-                        color: Colors.purple,
+                        icon: Icons.cancel_outlined,
+                        value: noEntregados.toString(),
+                        label: 'No entregados',
+                        color: Colors.red,
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
 
-                  // ========== ENTREGA ACTIVA ==========
-                  if (activeAssignment != null)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade200,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              Icons.task_alt,
-                              color: Colors.green.shade700,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Entrega activa: ${activeAssignment.title}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.timer_outlined,
-                                      size: 14,
-                                      color: Colors.green.shade700,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Vence en: ${activeAssignment.timeRemaining}',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.green.shade700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  // ========== BUSCADOR Y FILTROS ==========
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -387,15 +573,16 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                         ),
                         const SizedBox(height: 12),
                         
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
                             _buildFilterChip('Todos', totalStudents),
-                            const SizedBox(width: 8),
                             _buildFilterChip('Entregados', entregados),
-                            const SizedBox(width: 8),
                             _buildFilterChip('Pendientes', pendientes),
-                            const SizedBox(width: 8),
                             _buildFilterChip('No entregados', noEntregados),
+                            if (activeAssignment == null)
+                              _buildFilterChip('Sin entrega', sinEntrega),
                           ],
                         ),
                       ],
@@ -403,7 +590,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // ========== TABLA DE ALUMNOS ==========
                   if (filteredStudents.isEmpty)
                     Center(
                       child: Padding(
@@ -430,7 +616,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                       ),
                       child: Column(
                         children: [
-                          // HEADER
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             decoration: BoxDecoration(
@@ -448,32 +633,51 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                 Expanded(flex: 2, child: _buildHeaderText('ALUMNO')),
                                 Expanded(flex: 2, child: _buildHeaderText('MATRÍCULA')),
                                 Expanded(flex: 1, child: _buildHeaderText('ESTADO')),
+                                Expanded(flex: 1, child: _buildHeaderText('FECHA')),
                                 Expanded(flex: 2, child: _buildHeaderText('CALIFICACIÓN')),
                               ],
                             ),
                           ),
                           
-                          // LISTA DE ALUMNOS
                           ...filteredStudents.map((student) {
                             final status = student['status'];
                             final matricula = student['matricula'];
                             final calificacion = student['calificacion'] as double;
                             final statusColor = _getStatusColor(status);
                             final statusIcon = _getStatusIcon(status);
+                            final hasGrade = calificacion > 0;
+                            final submissionDate = student['submission_date'];
+                            final hasSubmission = student['has_submission'] ?? false;
 
                             return InkWell(
                               onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => StudentRecipeScreen(
-                                      classId: widget.classId,
-                                      studentId: student['student_id'],
-                                      studentName: student['full_name'],
-                                      assignmentId: activeAssignment?.id,
+                                if (hasSubmission && activeAssignment != null) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => StudentRecipeScreen(
+                                        classId: widget.classId,
+                                        studentId: student['student_id'],
+                                        studentName: student['full_name'],
+                                        assignmentId: activeAssignment?.id,
+                                      ),
                                     ),
-                                  ),
-                                ).then((_) => _loadData());
+                                  ).then((_) => _loadData());
+                                } else if (activeAssignment == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('📌 No hay entrega activa'),
+                                      backgroundColor: Colors.orange,
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('⏳ Este alumno aún no ha entregado su recetario'),
+                                      backgroundColor: Colors.orange,
+                                    ),
+                                  );
+                                }
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -484,20 +688,19 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                 ),
                                 child: Row(
                                   children: [
-                                    // NOMBRE
                                     Expanded(
                                       flex: 2,
                                       child: Row(
                                         children: [
                                           CircleAvatar(
-                                            radius: 16,
+                                            radius: 14,
                                             backgroundColor: Colors.orange.shade100,
                                             child: Text(
-                                              student['full_name'].isNotEmpty
-                                                  ? student['full_name'][0].toUpperCase()
+                                              _toSafeString(student['full_name']).isNotEmpty
+                                                  ? _toSafeString(student['full_name'])[0].toUpperCase()
                                                   : '?',
                                               style: TextStyle(
-                                                fontSize: 12,
+                                                fontSize: 11,
                                                 fontWeight: FontWeight.bold,
                                                 color: const Color(0xFFE65100),
                                               ),
@@ -506,9 +709,9 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Text(
-                                              student['full_name'],
+                                              _toSafeString(student['full_name']),
                                               style: const TextStyle(
-                                                fontSize: 14,
+                                                fontSize: 13,
                                                 fontWeight: FontWeight.w500,
                                                 color: Color(0xFF1A1A1A),
                                               ),
@@ -519,26 +722,24 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                       ),
                                     ),
                                     
-                                    // MATRÍCULA
                                     Expanded(
                                       flex: 2,
                                       child: Text(
                                         matricula,
                                         style: TextStyle(
-                                          fontSize: 13,
+                                          fontSize: 12,
                                           color: Colors.grey.shade600,
                                         ),
                                       ),
                                     ),
                                     
-                                    // ESTADO
                                     Expanded(
                                       flex: 1,
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
                                           color: statusColor.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(10),
                                           border: Border.all(
                                             color: statusColor.withOpacity(0.3),
                                           ),
@@ -548,14 +749,14 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                           children: [
                                             Text(
                                               statusIcon,
-                                              style: const TextStyle(fontSize: 11),
+                                              style: const TextStyle(fontSize: 10),
                                             ),
-                                            const SizedBox(width: 3),
+                                            const SizedBox(width: 2),
                                             Flexible(
                                               child: Text(
-                                                status,
+                                                status == 'Sin entrega activa' ? 'Sin entrega' : status,
                                                 style: TextStyle(
-                                                  fontSize: 10,
+                                                  fontSize: 9,
                                                   fontWeight: FontWeight.w500,
                                                   color: statusColor,
                                                 ),
@@ -567,10 +768,22 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                       ),
                                     ),
                                     
-                                    // CALIFICACIÓN
+                                    Expanded(
+                                      flex: 1,
+                                      child: Text(
+                                        submissionDate != null ? _formatDate(submissionDate) : '—',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: submissionDate != null 
+                                              ? Colors.grey.shade700 
+                                              : Colors.grey.shade400,
+                                        ),
+                                      ),
+                                    ),
+                                    
                                     Expanded(
                                       flex: 2,
-                                      child: calificacion > 0
+                                      child: hasGrade
                                           ? Row(
                                               children: List.generate(5, (starIndex) {
                                                 final isFull = starIndex < calificacion.floor();
@@ -593,10 +806,17 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                               }),
                                             )
                                           : Text(
-                                              '—',
+                                              status == 'Entregado' 
+                                                  ? 'Sin calificar' 
+                                                  : '—',
                                               style: TextStyle(
-                                                fontSize: 13,
-                                                color: Colors.grey.shade400,
+                                                fontSize: 12,
+                                                color: status == 'Entregado' 
+                                                    ? Colors.grey.shade500 
+                                                    : Colors.grey.shade400,
+                                                fontStyle: status == 'Entregado' 
+                                                    ? FontStyle.italic 
+                                                    : FontStyle.normal,
                                               ),
                                             ),
                                     ),
@@ -606,7 +826,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                             );
                           }).toList(),
                           
-                          // PIE
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                             decoration: BoxDecoration(
@@ -619,12 +838,50 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                 top: BorderSide(color: Colors.grey.shade200),
                               ),
                             ),
-                            child: Text(
-                              'Mostrando ${filteredStudents.length} de $totalStudents alumnos',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade500,
-                              ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Mostrando ${filteredStudents.length} de $totalStudents alumnos',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                                if (_classCode != null && _classCode!.isNotEmpty)
+                                  GestureDetector(
+                                    onTap: _copyClassCode,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE65100),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.copy,
+                                            color: Colors.white,
+                                            size: 14,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Copiar código',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ],
@@ -637,11 +894,9 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           ),
         ],
       ),
-      // ========== BOTONES FLOTANTES ==========
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // ✅ BOTÓN COPIAR CÓDIGO
           if (_classCode != null && _classCode!.isNotEmpty)
             FloatingActionButton(
               heroTag: 'copiar_codigo',
@@ -652,7 +907,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
               child: const Icon(Icons.copy, color: Color(0xFFE65100)),
             ),
           const SizedBox(height: 12),
-          // ✅ BOTÓN NUEVA ENTREGA
           FloatingActionButton.extended(
             heroTag: 'nueva_entrega',
             onPressed: () {
@@ -723,46 +977,47 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
   Widget _buildFilterChip(String label, int count) {
     final isSelected = _filterStatus == label;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _filterStatus = label),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFE65100) : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(20),
+    return GestureDetector(
+      onTap: () => setState(() => _filterStatus = label),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFE65100) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFE65100) : Colors.grey.shade300,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                label,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? Colors.white : Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: isSelected 
+                    ? Colors.white.withOpacity(0.2) 
+                    : Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                count.toString(),
                 style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
                   color: isSelected ? Colors.white : Colors.grey.shade700,
                 ),
               ),
-              const SizedBox(width: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                decoration: BoxDecoration(
-                  color: isSelected 
-                      ? Colors.white.withOpacity(0.2) 
-                      : Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  count.toString(),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected ? Colors.white : Colors.grey.shade700,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -772,10 +1027,10 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     return Text(
       text,
       style: TextStyle(
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: FontWeight.w600,
         color: Colors.grey.shade600,
-        letterSpacing: 0.5,
+        letterSpacing: 0.3,
       ),
     );
   }

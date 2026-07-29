@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:remy/providers/auth_provider.dart';
 import 'package:remy/services/supabase_service.dart';
 import 'package:remy/views/shared/widgets/loading_widget.dart';
 
@@ -38,6 +37,16 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
     _loadRecipes();
   }
 
+  String _toSafeString(dynamic value) {
+    if (value == null) return '';
+    if (value is String) return value;
+    try {
+      return value.toString();
+    } catch (e) {
+      return '';
+    }
+  }
+
   Future<void> _loadRecipes() async {
     setState(() {
       _isLoading = true;
@@ -53,28 +62,33 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
         return;
       }
 
-      // ✅ Obtener recetas del alumno (simulado, sin Supabase)
-      // TODO: Conectar con Supabase
-      await Future.delayed(const Duration(milliseconds: 500));
+      final response = await _supabase.supabase
+          .from('recipes')
+          .select('''
+            *,
+            image_url,
+            grades!left (
+              id,
+              stars,
+              graded_at
+            )
+          ''')
+          .eq('assignment_id', widget.assignmentId as Object)
+          .eq('student_id', widget.studentId)
+          .order('created_at', ascending: true);
+
+      final List<Map<String, dynamic>> recipes = List<Map<String, dynamic>>.from(response);
       
-      final List<Map<String, dynamic>> recipes = [
-        {
-          'id': '1',
-          'name': 'Enchiladas Verdes',
-          'type': 'Comida',
-          'ingredients': 'Tortillas, pollo, salsa verde, crema',
-          'procedure': '1. Cocinar pollo\n2. Preparar salsa\n3. Armar enchiladas',
-          'image_url': null,
-        },
-        {
-          'id': '2',
-          'name': 'Agua de Jamaica',
-          'type': 'Bebida',
-          'ingredients': 'Jamaica, agua, azúcar',
-          'procedure': '1. Hervir jamaica\n2. Endulzar\n3. Enfriar',
-          'image_url': null,
-        },
-      ];
+      if (recipes.isNotEmpty) {
+        final firstRecipe = recipes.first;
+        if (firstRecipe['grades'] != null) {
+          final grades = firstRecipe['grades'] as List;
+          if (grades.isNotEmpty && grades.first['stars'] != null) {
+            _isGraded = true;
+            _currentGrade = (grades.first['stars'] as num).toDouble();
+          }
+        }
+      }
 
       setState(() {
         _recipes = recipes;
@@ -87,6 +101,165 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _saveGrade(double rating) async {
+    if (_recipes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay recetas para calificar'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar calificación'),
+        content: Text(
+          '¿Estás seguro de calificar este recetario con $rating estrellas?\n\n⚠️ Una vez calificado, NO se podrá modificar.',
+          style: TextStyle(fontSize: 14),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFE65100),
+            ),
+            child: const Text('Calificar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final recipeId = _recipes.first['id'];
+
+      final existingGrade = await _supabase.supabase
+          .from('grades')
+          .select()
+          .eq('recipe_id', recipeId)
+          .maybeSingle();
+
+      if (existingGrade != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ Este recetario ya está calificado'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      await _supabase.supabase
+          .from('grades')
+          .insert({
+            'recipe_id': recipeId,
+            'stars': rating,
+            'graded_at': DateTime.now().toIso8601String(),
+            'assignment_id': widget.assignmentId,
+            'student_id': widget.studentId,
+          });
+
+      setState(() {
+        _currentGrade = rating;
+        _isGraded = true;
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ Calificación de ${rating.toStringAsFixed(0)} estrellas guardada'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Error al calificar: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // 🛠️ NUEVA FUNCIÓN PARA FORMATEAR EL JSON DE INGREDIENTES
+  Widget _buildIngredients(dynamic ingredientsData) {
+    if (ingredientsData == null) return const SizedBox.shrink();
+
+    List<dynamic> ingredientsList = [];
+    if (ingredientsData is List) {
+      ingredientsList = ingredientsData;
+    } else if (ingredientsData is String) {
+      // Intentar parsear si es un string con formato JSON
+      try {
+        ingredientsList = List<dynamic>.from(ingredientsData as List);
+      } catch (e) {
+        // Si no se puede parsear, lo mostramos como texto simple
+        return Text(
+          ingredientsData,
+          style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
+        );
+      }
+    }
+
+    if (ingredientsList.isEmpty) {
+      return Text(
+        'No especificados',
+        style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: ingredientsList.map((item) {
+        String name = '';
+        String quantity = '';
+        
+        if (item is Map) {
+          name = item['name']?.toString() ?? 'Ingrediente';
+          quantity = item['quantity']?.toString() ?? '';
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 4.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('• ', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.orange)),
+              Expanded(
+                child: Text(
+                  quantity.isNotEmpty ? '$name ($quantity)' : name,
+                  style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
   }
 
   @override
@@ -169,7 +342,6 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          // ✅ Mostrar calificación en el AppBar
           if (_isGraded && _currentGrade != null)
             Padding(
               padding: const EdgeInsets.only(right: 16),
@@ -178,10 +350,11 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
                   const Icon(Icons.star, color: Colors.amber, size: 20),
                   const SizedBox(width: 4),
                   Text(
-                    _currentGrade!.toStringAsFixed(1),
+                    _currentGrade!.toStringAsFixed(0),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -191,7 +364,7 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
       ),
       body: Column(
         children: [
-          // ========== CALIFICACIÓN CON ESTRELLAS ==========
+          // ========== CALIFICACIÓN ==========
           if (!_isGraded)
             Container(
               padding: const EdgeInsets.all(16),
@@ -204,7 +377,7 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
               child: Column(
                 children: [
                   const Text(
-                    'Calificar recetario',
+                    '⭐ Calificar recetario',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -223,34 +396,47 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
                           color: Colors.amber,
                           size: 40,
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _currentGrade = starValue;
-                            _isGraded = true;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('✅ Calificación de ${starValue.toStringAsFixed(0)} estrellas'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        },
+                        onPressed: () => _saveGrade(starValue),
                       );
                     }),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Toca las estrellas para calificar',
+                    'Toca las estrellas para calificar (1-5)',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '⚠️ Una vez calificado, NO se podrá modificar',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             )
           else
-            // ✅ Si ya está calificado, mostrar solo la calificación
+            // ✅ Ya calificado
             Container(
               padding: const EdgeInsets.all(16),
               margin: const EdgeInsets.all(16),
@@ -262,10 +448,10 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.check_circle, color: Colors.green),
+                  const Icon(Icons.lock_outline, color: Colors.green),
                   const SizedBox(width: 8),
                   Text(
-                    'Calificado: ${_currentGrade?.toStringAsFixed(0) ?? 0} estrellas',
+                    '✅ Calificado: ${_currentGrade?.toStringAsFixed(0) ?? 0} estrellas',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.green.shade700,
@@ -275,95 +461,126 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
               ),
             ),
 
-          // ========== CONTADOR ==========
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Receta ${_currentIndex + 1} de ${_recipes.length}',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  recipe['name'] ?? 'Receta sin nombre',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(),
+          // ========== CONTENIDO CON SCROLL (CORREGIDO PARA WEB) ==========
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ========== TIPO ==========
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        recipe['type'] ?? 'Comida',
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // HEADER DE RECETA
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Receta ${_currentIndex + 1} de ${_recipes.length}',
                         style: TextStyle(
-                          color: Colors.orange.shade800,
-                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        _toSafeString(recipe['name']),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // TIPO
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      _toSafeString(recipe['type']),
+                      style: TextStyle(
+                        color: Colors.orange.shade800,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 🖼️ IMAGEN CORREGIDA PARA WEB
+                  if (recipe['image_url'] != null && recipe['image_url'].toString().isNotEmpty)
+                    Container(
+                      width: double.infinity,
+                      constraints: const BoxConstraints(
+                        minHeight: 200,
+                        maxHeight: 400, // Limita la altura máxima en pantallas grandes
+                      ),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          recipe['image_url'].toString(),
+                          // BoxFit.contain hace que la imagen se vea COMPLETA, sin cortarse ni estirarse
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 200,
+                              color: Colors.grey.shade200,
+                              child: const Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.image_not_supported, size: 40, color: Colors.grey),
+                                    SizedBox(height: 8),
+                                    Text('Imagen no disponible', style: TextStyle(color: Colors.grey)),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
 
-                    // ========== INGREDIENTES ==========
-                    const Text(
-                      'Ingredientes',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
+                  // INGREDIENTES (Ahora con formato de lista)
+                  const Text(
+                    'Ingredientes',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      recipe['ingredients'] ?? 'No especificados',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildIngredients(recipe['ingredients']),
+                  const SizedBox(height: 16),
 
-                    // ========== PROCEDIMIENTO ==========
-                    const Text(
-                      'Procedimiento',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
+                  // PROCEDIMIENTO
+                  const Text(
+                    'Procedimiento',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      recipe['procedure'] ?? 'No especificado',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.grey.shade700,
-                      ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _toSafeString(recipe['procedure']),
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey.shade700,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 30), // Espacio extra al final
+                ],
               ),
             ),
           ),
 
-          // ========== NAVEGACIÓN ==========
+          // ========== NAVEGACIÓN INFERIOR ==========
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
