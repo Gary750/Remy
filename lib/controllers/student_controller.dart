@@ -218,8 +218,10 @@ class StudentController {
       final recipes = List<Map<String, dynamic>>.from(recipesResponse);
       if (recipes.isEmpty) return [];
 
-      final assignmentIds =
-          recipes.map((r) => r['assignment_id']).toSet().toList();
+      final assignmentIds = recipes
+          .map((r) => r['assignment_id'])
+          .toSet()
+          .toList();
 
       final gradesResponse = await _supabase.supabase
           .from('grades')
@@ -229,14 +231,11 @@ class StudentController {
 
       final gradesMap = {
         for (final g in List<Map<String, dynamic>>.from(gradesResponse))
-          g['assignment_id']: g['stars']
+          g['assignment_id']: g['stars'],
       };
 
       return recipes
-          .map((r) => {
-                ...r,
-                'stars': gradesMap[r['assignment_id']],
-              })
+          .map((r) => {...r, 'stars': gradesMap[r['assignment_id']]})
           .toList();
     } catch (e) {
       print('Error al obtener calificaciones: $e');
@@ -272,10 +271,7 @@ class StudentController {
           .eq('student_id', recipe['student_id'])
           .maybeSingle();
 
-      return {
-        ...recipe,
-        'stars': grade?['stars'],
-      };
+      return {...recipe, 'stars': grade?['stars']};
     } catch (e) {
       print('Error al obtener detalle de calificación: $e');
       return null;
@@ -290,9 +286,7 @@ class StudentController {
     String? cookingStyle,
   }) async {
     try {
-      var request = _supabase.supabase
-          .from('recipes')
-          .select('''
+      var request = _supabase.supabase.from('recipes').select('''
             *,
             profiles!inner (
               full_name
@@ -354,8 +348,7 @@ class StudentController {
   // actual no hubiera subido nada (bastaba con que un compañero sí lo
   // hubiera hecho). Ahora se filtran solo las recetas del alumno en sesión
   // y se agrega su calificación (stars) por separado.
-  Future<List<Map<String, dynamic>>> getClassAssignments(
-      String classId) async {
+  Future<List<Map<String, dynamic>>> getClassAssignments(String classId) async {
     try {
       final session = _supabase.supabase.auth.currentSession;
       final userId = session?.user.id;
@@ -386,7 +379,7 @@ class StudentController {
             .inFilter('assignment_id', assignmentIds);
         gradesMap = {
           for (final g in List<Map<String, dynamic>>.from(gradesResponse))
-            g['assignment_id']: g['stars']
+            g['assignment_id']: g['stars'],
         };
       }
 
@@ -432,10 +425,7 @@ class StudentController {
           .eq('student_id', userId)
           .maybeSingle();
 
-      return {
-        ...recipe,
-        'stars': grade?['stars'],
-      };
+      return {...recipe, 'stars': grade?['stars']};
     } catch (e) {
       print('Error al obtener mi entrega: $e');
       return null;

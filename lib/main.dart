@@ -80,16 +80,22 @@ class MyApp extends StatelessWidget {
           AppRoutes.register: (context) => const RegisterScreen(),
 
           // ========== PROFESOR ==========
-          AppRoutes.professorDashboard: (context) => const ProfessorDashboardScreen(),
-          AppRoutes.professorCreateClass: (context) => const CreateClassScreen(),
-          AppRoutes.professorProfile: (context) => const ProfessorProfileScreen(),
+          AppRoutes.professorDashboard: (context) =>
+              const ProfessorDashboardScreen(),
+          AppRoutes.professorCreateClass: (context) =>
+              const CreateClassScreen(),
+          AppRoutes.professorProfile: (context) =>
+              const ProfessorProfileScreen(),
 
           // ========== ESTUDIANTE ==========
-          AppRoutes.studentDashboard: (context) => const StudentDashboardScreen(),
+          AppRoutes.studentDashboard: (context) =>
+              const StudentDashboardScreen(),
           AppRoutes.studentMyRecipes: (context) => const MyRecipesScreen(),
-          AppRoutes.studentSearchRecipes: (context) => const SearchRecipesScreen(),
+          AppRoutes.studentSearchRecipes: (context) =>
+              const SearchRecipesScreen(),
           AppRoutes.studentMyGrades: (context) => const MyGradesScreen(),
-          AppRoutes.studentProfile: (context) => const ProfessorProfileScreen(), // Reutiliza perfil
+          AppRoutes.studentProfile: (context) =>
+              const ProfessorProfileScreen(), // Reutiliza perfil
         },
         onGenerateRoute: (settings) {
           switch (settings.name) {
@@ -97,10 +103,8 @@ class MyApp extends StatelessWidget {
             case AppRoutes.professorClassDetail:
               final classId = settings.arguments as String;
               return MaterialPageRoute(
-                builder: (context) => ClassDetailScreen(
-                  classId: classId,
-                  className: '',
-                ),
+                builder: (context) =>
+                    ClassDetailScreen(classId: classId, className: ''),
               );
             case AppRoutes.professorCreateAssignment:
               final classId = settings.arguments as String;
@@ -122,7 +126,8 @@ class MyApp extends StatelessWidget {
             case AppRoutes.studentClassDetail:
               final classId = settings.arguments as String;
               return MaterialPageRoute(
-                builder: (context) => StudentClassDetailScreen(classId: classId),
+                builder: (context) =>
+                    StudentClassDetailScreen(classId: classId),
               );
             case AppRoutes.studentUploadRecipe:
               final args = settings.arguments as Map<String, dynamic>;
@@ -152,9 +157,7 @@ class MyApp extends StatelessWidget {
             default:
               return MaterialPageRoute(
                 builder: (context) => const Scaffold(
-                  body: Center(
-                    child: Text('Ruta no encontrada'),
-                  ),
+                  body: Center(child: Text('Ruta no encontrada')),
                 ),
               );
           }

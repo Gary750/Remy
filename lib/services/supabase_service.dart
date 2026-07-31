@@ -59,12 +59,17 @@ class SupabaseService {
     );
 
     if (response.user != null) {
+      // Esperar a que el trigger de Supabase termine de crear el perfil
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      print('📝 signUp - Haciendo upsert con rol: $role');
       await client.from('profiles').upsert({
         'id': response.user!.id,
         'full_name': fullName,
         'email': email,
         'role': role,
       });
+      print('📝 signUp - Upsert completado con rol: $role');
     }
 
     return response;
