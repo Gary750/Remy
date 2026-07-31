@@ -31,7 +31,9 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
 
     try {
       final classData = await _studentController.getClassDetail(widget.classId);
-      final assignments = await _studentController.getClassAssignments(widget.classId);
+      final assignments = await _studentController.getClassAssignments(
+        widget.classId,
+      );
 
       if (mounted) {
         setState(() {
@@ -69,14 +71,12 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
       );
     }
 
-    final className = '${_classData!['subject']} - Grupo ${_classData!['group_name']}';
+    final className =
+        '${_classData!['subject']} - Grupo ${_classData!['group_name']}';
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          className,
-          style: const TextStyle(fontSize: 16),
-        ),
+        title: Text(className, style: const TextStyle(fontSize: 16)),
         backgroundColor: const Color(0xFFE65100),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -134,7 +134,11 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                   // Cuatrimestre y Grupo
                   Row(
                     children: [
-                      Icon(Icons.event_note, size: 16, color: Colors.grey.shade600),
+                      Icon(
+                        Icons.event_note,
+                        size: 16,
+                        color: Colors.grey.shade600,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -151,7 +155,11 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                   // Código
                   Row(
                     children: [
-                      Icon(Icons.vpn_key, size: 16, color: Colors.grey.shade600),
+                      Icon(
+                        Icons.vpn_key,
+                        size: 16,
+                        color: Colors.grey.shade600,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -177,10 +185,7 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                 const SizedBox(width: 8),
                 const Text(
                   'Entregas',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -192,14 +197,13 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                 alignment: Alignment.center,
                 child: Text(
                   'No hay entregas disponibles',
-                  style: TextStyle(
-                    color: Colors.grey.shade500,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
                 ),
               )
             else
-              ..._assignments.map((assignment) => _buildAssignmentCard(assignment)),
+              ..._assignments.map(
+                (assignment) => _buildAssignmentCard(assignment),
+              ),
           ],
         ),
       ),
@@ -209,14 +213,13 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
   Widget _buildAssignmentCard(Map<String, dynamic> assignment) {
     final assignmentModel = AssignmentModel.fromJson(assignment);
     final isActive = assignmentModel.isActive;
-    final hasSubmission = assignment['recipes'] != null && 
+    final hasSubmission =
+        assignment['recipes'] != null &&
         (assignment['recipes'] as List).isNotEmpty;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -241,7 +244,9 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: isActive ? Colors.green.shade100 : Colors.grey.shade200,
+                    color: isActive
+                        ? Colors.green.shade100
+                        : Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -249,7 +254,9 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: isActive ? Colors.green.shade700 : Colors.grey.shade600,
+                      color: isActive
+                          ? Colors.green.shade700
+                          : Colors.grey.shade600,
                     ),
                   ),
                 ),
@@ -258,21 +265,23 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade600),
+                Icon(
+                  Icons.calendar_today,
+                  size: 14,
+                  color: Colors.grey.shade600,
+                ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     'Límite: ${_formatDate(assignment['due_date'])}',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            if (assignment['instructions'] != null && assignment['instructions'].isNotEmpty)
+            if (assignment['instructions'] != null &&
+                assignment['instructions'].isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Row(
@@ -321,17 +330,15 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: hasSubmission 
-                        ? Colors.orange 
+                    backgroundColor: hasSubmission
+                        ? Colors.orange
                         : const Color(0xFFE65100),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   child: Text(
-                    hasSubmission 
-                        ? 'Ver mi recetario' 
-                        : 'Subir recetario',
+                    hasSubmission ? 'Ver mi recetario' : 'Subir recetario',
                     style: const TextStyle(color: Colors.white),
                   ),
                 ),

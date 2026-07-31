@@ -27,7 +27,7 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
 
   Future<void> _joinClass() async {
     final code = _codeController.text.trim().toUpperCase();
-    
+
     if (code.isEmpty) {
       setState(() => _errorMessage = 'Ingresa el código de la clase');
       return;
@@ -40,7 +40,7 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
 
     try {
       final success = await _studentController.joinClass(code);
-      
+
       if (!mounted) return;
 
       if (success) {
@@ -80,17 +80,12 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
         children: [
           const Text(
             'Unirse a Clase',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
             'Ingresa el código que te compartió tu profesor',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 24),
           CustomTextField(
@@ -114,12 +109,19 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.error_outline, color: Colors.red.shade700, size: 18),
+                  Icon(
+                    Icons.error_outline,
+                    color: Colors.red.shade700,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _errorMessage!,
-                      style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],

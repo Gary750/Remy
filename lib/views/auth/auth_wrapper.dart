@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:remy/providers/auth_provider.dart';
 import 'package:remy/views/auth/login_screen.dart';
 import 'package:remy/views/mobile/professor/dashboard_screen.dart';
-import 'package:remy/views/student/my_classes_screen.dart';
+import 'package:remy/views/student/student_dashboard_screen.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -50,7 +50,7 @@ class AuthWrapper extends StatelessWidget {
           return const ProfessorDashboardScreen();
         } else {
           print('🟢 Es estudiante - Mostrando StudentMyClassesScreen');
-          return const StudentMyClassesScreen();
+          return const StudentDashboardScreen();
         }
       },
     );

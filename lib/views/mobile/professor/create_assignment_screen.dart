@@ -8,14 +8,10 @@ import 'package:remy/views/shared/widgets/loading_widget.dart';
 class CreateAssignmentScreen extends StatefulWidget {
   final String classId;
 
-  const CreateAssignmentScreen({
-    super.key,
-    required this.classId,
-  });
+  const CreateAssignmentScreen({super.key, required this.classId});
 
   @override
-  State<CreateAssignmentScreen> createState() =>
-      _CreateAssignmentScreenState();
+  State<CreateAssignmentScreen> createState() => _CreateAssignmentScreenState();
 }
 
 class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
@@ -285,8 +281,11 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
     print('  - Tipo: $_selectedRecipeType');
     print('  - Fecha límite: $dueDate');
 
-    final success = await Provider.of<AssignmentProvider>(context, listen: false)
-        .createAssignment(
+    final success =
+        await Provider.of<AssignmentProvider>(
+          context,
+          listen: false,
+        ).createAssignment(
           classId: widget.classId,
           title: _titleController.text.trim(),
           recipeType: _selectedRecipeType!, // 'Comida', 'Bebida' o 'Ambos'

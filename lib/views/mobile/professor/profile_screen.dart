@@ -68,7 +68,7 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
         maxHeight: 512,
         imageQuality: 80,
       );
-      
+
       if (image != null) {
         setState(() => _isLoading = true);
 
@@ -80,9 +80,10 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
 
         // Actualizar avatar_url en la tabla profiles
         final userId = context.read<AuthProvider>().currentUser!.id;
-        await _supabase.supabase.from('profiles').update({
-          'avatar_url': url,
-        }).eq('id', userId);
+        await _supabase.supabase
+            .from('profiles')
+            .update({'avatar_url': url})
+            .eq('id', userId);
 
         // Refrescar el perfil en el provider
         await context.read<AuthProvider>().loadUserProfile(userId);
@@ -126,9 +127,10 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
       final authProvider = context.read<AuthProvider>();
       final userId = authProvider.currentUser!.id;
 
-      await _supabase.supabase.from('profiles').update({
-        'full_name': _nameController.text.trim(),
-      }).eq('id', userId);
+      await _supabase.supabase
+          .from('profiles')
+          .update({'full_name': _nameController.text.trim()})
+          .eq('id', userId);
 
       await authProvider.loadUserProfile(userId);
 
@@ -196,15 +198,13 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
     try {
       final supabase = Supabase.instance.client;
       final currentUser = supabase.auth.currentUser;
-      
+
       if (currentUser == null) {
         throw Exception('No hay usuario autenticado');
       }
 
       await supabase.auth.updateUser(
-        UserAttributes(
-          password: _newPasswordController.text,
-        ),
+        UserAttributes(password: _newPasswordController.text),
       );
 
       setState(() {
@@ -227,23 +227,22 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
       setState(() {
         _isLoading = false;
       });
-      
+
       String errorMessage = 'Error al cambiar contraseña';
-      
+
       final errorStr = e.toString().toLowerCase();
-      if (errorStr.contains('same as old password') || errorStr.contains('new password cannot be the same')) {
+      if (errorStr.contains('same as old password') ||
+          errorStr.contains('new password cannot be the same')) {
         errorMessage = 'La nueva contraseña debe ser diferente a la actual';
       } else if (errorStr.contains('password') && errorStr.contains('weak')) {
         errorMessage = 'La contraseña es muy débil. Usa más caracteres.';
       } else if (errorStr.contains('422')) {
-        errorMessage = 'Error de validación. Asegúrate que la nueva contraseña sea diferente a la actual.';
+        errorMessage =
+            'Error de validación. Asegúrate que la nueva contraseña sea diferente a la actual.';
       }
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ $errorMessage'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('❌ $errorMessage'), backgroundColor: Colors.red),
       );
     }
   }
@@ -254,9 +253,7 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Cerrar Sesión'),
         content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -264,9 +261,7 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Cerrar Sesión'),
           ),
         ],
@@ -297,9 +292,7 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
     final user = authProvider.currentUser;
 
     if (authProvider.isLoading || _isLoading) {
-      return const Scaffold(
-        body: LoadingWidget(message: 'Cargando perfil...'),
-      );
+      return const Scaffold(body: LoadingWidget(message: 'Cargando perfil...'));
     }
 
     return Scaffold(
@@ -416,10 +409,7 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   'Toca la foto para cambiarla',
-                  style: TextStyle(
-                    color: Colors.orange.shade700,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
                 ),
               ),
             const SizedBox(height: 32),
@@ -493,10 +483,7 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(
-                            Icons.lock_outlined,
-                            color: Colors.grey,
-                          ),
+                          const Icon(Icons.lock_outlined, color: Colors.grey),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
