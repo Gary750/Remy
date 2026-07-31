@@ -5,6 +5,7 @@ class RatingWidget extends StatelessWidget {
   final int maxRating;
   final VoidCallback? onTap;
   final bool showLabel;
+  final bool isExpanded; // ✅ Nuevo parámetro para expandir
 
   const RatingWidget({
     super.key,
@@ -12,46 +13,58 @@ class RatingWidget extends StatelessWidget {
     this.maxRating = 10,
     this.onTap,
     this.showLabel = true,
+    this.isExpanded = false, // ✅ Por defecto false
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: _getColor(),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.star,
+    // ✅ Si rating es 0 o menor, no mostrar nada
+    if (rating <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    final child = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: _getColor(),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.star,
+            color: Colors.white,
+            size: 14,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            showLabel 
+                ? '${rating.toStringAsFixed(1)} / $maxRating'
+                : rating.toStringAsFixed(1),
+            style: const TextStyle(
               color: Colors.white,
-              size: 16,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
             ),
-            const SizedBox(width: 4),
-            Text(
-              showLabel 
-                  ? '$rating / $maxRating'
-                  : rating.toStringAsFixed(1),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+
+    // ✅ Si isExpanded es true, ocupa todo el ancho disponible
+    return isExpanded 
+        ? SizedBox(
+            width: double.infinity,
+            child: child,
+          )
+        : child;
   }
 
   Color _getColor() {
-    if (rating >= 9) return Colors.green;
-    if (rating >= 7) return Colors.orange;
-    return Colors.red;
+    final percentage = rating / maxRating;
+    if (percentage >= 0.8) return Colors.green.shade600;
+    if (percentage >= 0.6) return Colors.orange.shade600;
+    return Colors.red.shade600;
   }
 }

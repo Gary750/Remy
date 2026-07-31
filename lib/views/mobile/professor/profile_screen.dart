@@ -114,7 +114,6 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
     }
   }
 
-  // ========== ✅ GUARDAR PERFIL (SIN updated_at) ==========
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -127,7 +126,6 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
       final authProvider = context.read<AuthProvider>();
       final userId = authProvider.currentUser!.id;
 
-      // ✅ QUITAR 'updated_at' porque no existe en la BD
       await _supabase.supabase.from('profiles').update({
         'full_name': _nameController.text.trim(),
       }).eq('id', userId);
@@ -159,9 +157,7 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
     }
   }
 
-  // ========== ✅ CAMBIAR CONTRASEÑA (SIN reautenticar) ==========
   Future<void> _changePassword() async {
-    // Validar que las contraseñas coincidan
     if (_newPasswordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -172,7 +168,6 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
       return;
     }
 
-    // Validar longitud mínima
     if (_newPasswordController.text.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -183,7 +178,6 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
       return;
     }
 
-    // ✅ Validar que la nueva contraseña sea diferente a la actual
     if (_newPasswordController.text == _currentPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -207,7 +201,6 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
         throw Exception('No hay usuario autenticado');
       }
 
-      // ✅ CAMBIAR CONTRASEÑA DIRECTAMENTE
       await supabase.auth.updateUser(
         UserAttributes(
           password: _newPasswordController.text,
@@ -215,12 +208,13 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
       );
 
       setState(() {
-        _isChangingPassword = false;
+        _isChangingPassword = false; // ✅ Solo cierra el formulario de cambio
         _currentPasswordController.clear();
         _newPasswordController.clear();
         _confirmPasswordController.clear();
         _isLoading = false;
         _successMessage = 'Contraseña actualizada correctamente';
+        // ✅ _isEditing SIGUE EN TRUE
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -517,12 +511,20 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 2),
-                                Text(
-                                  '••••••••',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey.shade600,
-                                  ),
+                                Row(
+                                  children: [
+                                    ...List.generate(8, (index) {
+                                      return Container(
+                                        margin: const EdgeInsets.only(right: 4),
+                                        width: 8,
+                                        height: 8,
+                                        decoration: const BoxDecoration(
+                                          color: Colors.grey,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      );
+                                    }),
+                                  ],
                                 ),
                               ],
                             ),
@@ -666,6 +668,7 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
                   const SizedBox(height: 32),
 
                   // ========== BOTONES DE ACCIÓN ==========
+                  // ✅ Mostrar siempre en modo edición (incluso después de cambiar contraseña)
                   if (_isEditing && !_isChangingPassword) ...[
                     Row(
                       children: [

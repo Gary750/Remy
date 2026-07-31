@@ -35,6 +35,33 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
     }
   }
 
+  // ✅ Agrupar clases por cuatrimestre
+  Map<String, List<dynamic>> _groupClassesByTerm() {
+    final classProvider = Provider.of<ClassProvider>(context, listen: false);
+    final Map<String, List<dynamic>> grouped = {};
+
+    for (var classItem in classProvider.classes) {
+      final term = classItem.term;
+      if (!grouped.containsKey(term)) {
+        grouped[term] = [];
+      }
+      grouped[term]!.add(classItem);
+    }
+
+    // Ordenar cuatrimestres
+    final sortedKeys = grouped.keys.toList()..sort((a, b) {
+      final aNum = int.tryParse(a.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      final bNum = int.tryParse(b.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      return aNum.compareTo(bNum);
+    });
+
+    final sortedMap = <String, List<dynamic>>{};
+    for (var key in sortedKeys) {
+      sortedMap[key] = grouped[key]!;
+    }
+    return sortedMap;
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -47,14 +74,21 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
     }
 
     final userName = authProvider.currentUser?.fullName ?? 'Profesor';
+    final groupedClasses = _groupClassesByTerm();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('Mis Clases'),
+        title: const Text(
+          'Mis Clases',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: const Color(0xFFE65100),
         foregroundColor: Colors.white,
         elevation: 0,
+        centerTitle: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.account_circle_outlined),
@@ -74,26 +108,26 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sección de bienvenida
+            // ========== SECCIÓN DE BIENVENIDA ==========
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Colors.orange.shade50, Colors.orange.shade100],
                 ),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.orange.shade200),
               ),
               child: Row(
                 children: [
                   CircleAvatar(
-                    radius: 28,
+                    radius: 32,
                     backgroundColor: const Color(0xFFE65100),
                     child: Text(
                       userName.isNotEmpty ? userName[0].toUpperCase() : 'P',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 22,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -106,7 +140,7 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                         Text(
                           '¡Bienvenido, $userName!',
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFFE65100),
                           ),
@@ -126,7 +160,7 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Lista de clases
+            // ========== LISTA DE CLASES AGRUPADAS ==========
             if (classProvider.classes.isEmpty)
               Expanded(
                 child: Center(
@@ -174,26 +208,11 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
               )
             else
               Expanded(
-                child: ListView.builder(
-                  itemCount: classProvider.classes.length,
+                child: ListView(
                   padding: const EdgeInsets.only(bottom: 80),
-                  itemBuilder: (context, index) {
-                    final classItem = classProvider.classes[index];
-                    return ClassCard(
-                      classModel: classItem,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ClassDetailScreen(
-                              classId: classItem.id,
-                              className: classItem.displayName,
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
+                  children: groupedClasses.entries.map((entry) {
+                    return _buildTermSection(entry.key, entry.value);
+                  }).toList(),
                 ),
               ),
           ],
@@ -212,10 +231,73 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text(
           'Crear Clase',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  // ========== CONSTRUIR SECCIÓN POR CUATRIMESTRE ==========
+  Widget _buildTermSection(String term, List<dynamic> classes) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Título del cuatrimestre
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 4,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade100,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.orange.shade300,
+              ),
+            ),
+            child: Text(
+              term,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFFE65100),
+              ),
+            ),
+          ),
+        ),
+
+        // Tarjetas de clases
+        ...classes.map((classItem) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: ClassCard(
+              classModel: classItem,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ClassDetailScreen(
+                      classId: classItem.id,
+                      className: classItem.displayName,
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        }).toList(),
+
+        // Separador entre cuatrimestres
+        const SizedBox(height: 8),
+        Divider(
+          color: Colors.grey.shade200,
+          thickness: 1,
+        ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 }
