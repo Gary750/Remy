@@ -593,8 +593,16 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Column(
-                        children: [
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final double tableWidth =
+                              constraints.maxWidth < 600 ? 600 : constraints.maxWidth;
+                          return SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: SizedBox(
+                              width: tableWidth,
+                              child: Column(
+                                children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             decoration: BoxDecoration(
@@ -749,124 +757,132 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                     ),
                                     
                                     Expanded(
-                                      flex: 1,
-                                      child: Text(
-                                        submissionDate != null ? _formatDate(submissionDate) : '—',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: submissionDate != null 
-                                              ? Colors.grey.shade700 
-                                              : Colors.grey.shade400,
+                                       flex: 1,
+                                       child: Text(
+                                         submissionDate != null ? _formatDate(submissionDate) : '—',
+                                         style: TextStyle(
+                                           fontSize: 11,
+                                           color: submissionDate != null 
+                                               ? Colors.grey.shade700 
+                                               : Colors.grey.shade400,
+                                         ),
+                                       ),
+                                     ),
+                                     
+                                     Expanded(
+                                       flex: 2,
+                                       child: hasGrade
+                                           ? FittedBox(
+                                               fit: BoxFit.scaleDown,
+                                               alignment: Alignment.centerLeft,
+                                               child: Row(
+                                                 children: List.generate(5, (starIndex) {
+                                                   final isFull = starIndex < calificacion.floor();
+                                                   final isHalf = !isFull && starIndex < calificacion.ceil() && calificacion % 1 != 0;
+                                                   
+                                                   return Padding(
+                                                     padding: const EdgeInsets.only(right: 2),
+                                                     child: Icon(
+                                                       isFull 
+                                                           ? Icons.star 
+                                                           : isHalf 
+                                                               ? Icons.star_half 
+                                                               : Icons.star_border,
+                                                       size: 16,
+                                                       color: isFull || isHalf 
+                                                           ? Colors.amber 
+                                                           : Colors.grey.shade300,
+                                                     ),
+                                                   );
+                                                 }),
+                                               ),
+                                             )
+                                           : Text(
+                                               status == 'Entregado' 
+                                                   ? 'Sin calificar' 
+                                                   : '—',
+                                               style: TextStyle(
+                                                 fontSize: 12,
+                                                 color: status == 'Entregado' 
+                                                     ? Colors.grey.shade500 
+                                                     : Colors.grey.shade400,
+                                                 fontStyle: status == 'Entregado' 
+                                                     ? FontStyle.italic 
+                                                     : FontStyle.normal,
+                                               ),
+                                             ),
+                                     ),
+                                   ],
+                                 ),
+                               ),
+                             );
+                           }).toList(),
+                            
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: const BorderRadius.only(
+                                  bottomLeft: Radius.circular(12),
+                                  bottomRight: Radius.circular(12),
+                                ),
+                                border: Border(
+                                  top: BorderSide(color: Colors.grey.shade200),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Mostrando ${filteredStudents.length} de $totalStudents alumnos',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                  if (_classCode != null && _classCode!.isNotEmpty)
+                                    GestureDetector(
+                                      onTap: _copyClassCode,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFE65100),
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(
+                                              Icons.copy,
+                                              color: Colors.white,
+                                              size: 14,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Copiar código',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
-                                    
-                                    Expanded(
-                                      flex: 2,
-                                      child: hasGrade
-                                          ? Row(
-                                              children: List.generate(5, (starIndex) {
-                                                final isFull = starIndex < calificacion.floor();
-                                                final isHalf = !isFull && starIndex < calificacion.ceil() && calificacion % 1 != 0;
-                                                
-                                                return Padding(
-                                                  padding: const EdgeInsets.only(right: 2),
-                                                  child: Icon(
-                                                    isFull 
-                                                        ? Icons.star 
-                                                        : isHalf 
-                                                            ? Icons.star_half 
-                                                            : Icons.star_border,
-                                                    size: 16,
-                                                    color: isFull || isHalf 
-                                                        ? Colors.amber 
-                                                        : Colors.grey.shade300,
-                                                  ),
-                                                );
-                                              }),
-                                            )
-                                          : Text(
-                                              status == 'Entregado' 
-                                                  ? 'Sin calificar' 
-                                                  : '—',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: status == 'Entregado' 
-                                                    ? Colors.grey.shade500 
-                                                    : Colors.grey.shade400,
-                                                fontStyle: status == 'Entregado' 
-                                                    ? FontStyle.italic 
-                                                    : FontStyle.normal,
-                                              ),
-                                            ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                          
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade50,
-                              borderRadius: const BorderRadius.only(
-                                bottomLeft: Radius.circular(12),
-                                bottomRight: Radius.circular(12),
-                              ),
-                              border: Border(
-                                top: BorderSide(color: Colors.grey.shade200),
+                                ],
                               ),
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Mostrando ${filteredStudents.length} de $totalStudents alumnos',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade500,
-                                  ),
-                                ),
-                                if (_classCode != null && _classCode!.isNotEmpty)
-                                  GestureDetector(
-                                    onTap: _copyClassCode,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFE65100),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(
-                                            Icons.copy,
-                                            color: Colors.white,
-                                            size: 14,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Copiar código',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
+                    );
+                  },
+                ),
+              ),
                   const SizedBox(height: 80),
                 ],
               ),
