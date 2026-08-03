@@ -173,7 +173,7 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
           .from('grades')
           .insert({
             'recipe_id': recipeId,
-            'stars': rating,
+            'stars': rating.round(),
             'graded_at': DateTime.now().toIso8601String(),
             'assignment_id': widget.assignmentId,
             'student_id': widget.studentId,
