@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:remy/controllers/student_controller.dart';
 import 'package:remy/config/app_routes.dart';
+import 'package:remy/models/class_model.dart';
 import 'package:remy/views/shared/responsive_layout.dart';
 import 'package:remy/views/shared/widgets/class_card.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'join_class_screen.dart';
 
-class MyClassesScreen extends StatefulWidget {
-  const MyClassesScreen({super.key});
+class StudentMyClassesScreen extends StatefulWidget {
+  const StudentMyClassesScreen({super.key});
 
   @override
-  State<MyClassesScreen> createState() => _MyClassesScreenState();
+  State<StudentMyClassesScreen> createState() => _StudentMyClassesScreenState();
 }
 
-class _MyClassesScreenState extends State<MyClassesScreen> {
+class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> {
   final StudentController studentController = StudentController();
 
   bool isLoading = true;
@@ -40,31 +41,27 @@ class _MyClassesScreenState extends State<MyClassesScreen> {
     }
   }
 
+  void showJoinClassModal(BuildContext context, {required VoidCallback onJoined}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => JoinClassScreen(onJoined: onJoined),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mis clases'),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              Navigator.pushNamed(context, AppRoutes.profile);
-            },
-            tooltip: 'Mi Perfil',
-          ),
-        ],
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ResponsiveLayout(
-              mobile: _buildContent(crossAxisCount: 1),
-              tablet: _buildContent(crossAxisCount: 2),
-              desktop: _buildContent(crossAxisCount: 3),
-            ),
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return ResponsiveLayout(
+      mobile: _buildContent(crossAxisCount: 1),
+      tablet: _buildContent(crossAxisCount: 2),
+      desktop: _buildContent(crossAxisCount: 3),
     );
   }
 
@@ -74,17 +71,32 @@ class _MyClassesScreenState extends State<MyClassesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // CABECERA: texto + botón (corregido overflow)
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Clases en las que estás inscrito',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.school, color: Colors.grey.shade600),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Clases en las que estás inscrito',
+                        style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              CustomButton(
-                text: 'Unirse a clase',
-                onPressed: () => showJoinClassModal(context, onJoined: _loadClasses),
-                width: 150,
+              const SizedBox(width: 8),
+              // Botón flexible en lugar de ancho fijo
+              Flexible(
+                child: CustomButton(
+                  text: 'Unirse a clase',
+                  onPressed: () => showJoinClassModal(context, onJoined: _loadClasses),
+                  // eliminamos el width fijo para que se ajuste
+                ),
               ),
             ],
           ),
@@ -101,49 +113,76 @@ class _MyClassesScreenState extends State<MyClassesScreen> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.school_outlined, size: 80, color: Colors.grey[300]),
-          const SizedBox(height: 16),
-          Text(
-            'Aún no tienes clases',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 300),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.school_outlined, size: 80, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            Text(
+              'Aún no tienes clases',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[600],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Pídele el código a tu profesor y únete.',
-            style: TextStyle(color: Colors.grey[500]),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              'Pídele el código a tu profesor y únete.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildGrid(int crossAxisCount) {
+    // Ajustamos el aspect ratio para dar más altura
+    double aspectRatio;
+    if (crossAxisCount == 1) {
+      aspectRatio = 1.8; // antes 2.5
+    } else if (crossAxisCount == 2) {
+      aspectRatio = 1.5;
+    } else {
+      aspectRatio = 1.2;
+    }
+
     return GridView.builder(
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        childAspectRatio: crossAxisCount == 1 ? 2.5 : 1.5,
+        childAspectRatio: aspectRatio,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
-      itemCount: classes.length + 1, // +1 para el botón de "Unirse a otra"
+      itemCount: classes.length + 1,
       itemBuilder: (context, index) {
         if (index == classes.length) {
           return _buildJoinAnotherClassCard();
         }
 
         final cls = classes[index];
+        
+        final classModel = ClassModel(
+          id: cls['id'] ?? '',
+          professorId: cls['professor_id'] ?? '',
+          subject: cls['subject'] ?? '',
+          term: cls['term'] ?? '',
+          groupName: cls['group_name'] ?? '',
+          joinCode: cls['join_code'] ?? '',
+          createdAt: DateTime.now(),
+          studentCount: 0,
+        );
+
         return ClassCard(
-          className: '${cls['subject']} · Grupo ${cls['group_name']}',
-          studentsCount: 0,
-          deliveredCount: 0,
-          isStudent: true,
+          classModel: classModel,
           onTap: () {
             Navigator.pushNamed(
               context,

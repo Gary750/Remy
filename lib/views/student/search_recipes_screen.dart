@@ -60,7 +60,7 @@ class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
       final countries = await recipeController.getAvailableCountries();
       if (mounted) setState(() => countryOptions = countries);
     } catch (_) {
-      // Silencioso: los filtros de país simplemente quedarán vacíos
+      // silencio
     }
   }
 
@@ -104,7 +104,7 @@ class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Buscar Recetas'),
-        backgroundColor: Colors.orange,
+        backgroundColor: const Color(0xFFE65100),
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -167,7 +167,7 @@ class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
               onPressed: () => setState(() => showFilters = !showFilters),
               icon: const Icon(Icons.tune),
               style: IconButton.styleFrom(
-                backgroundColor: showFilters ? Colors.orange : Colors.grey[200],
+                backgroundColor: showFilters ? const Color(0xFFE65100) : Colors.grey[200],
                 foregroundColor: showFilters ? Colors.white : Colors.grey[700],
               ),
             ),

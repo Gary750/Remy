@@ -3,7 +3,6 @@ import 'package:remy/controllers/recipe_controller.dart';
 import 'package:remy/views/shared/responsive_layout.dart';
 
 class MyRecipesScreen extends StatefulWidget {
-  /// Si se provee, la pantalla abre directo el detalle de esa receta.
   final String? assignmentId;
   final String? classId;
 
@@ -35,13 +34,17 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
     try {
       final data = await recipeController.getMyRecipes();
       setState(() {
-        recipes = data;
         if (widget.assignmentId != null) {
-          final match = recipes.firstWhere(
-            (r) => r['assignment_id'] == widget.assignmentId,
-            orElse: () => {},
-          );
-          selectedRecipeId = match.isNotEmpty ? match['id'] : null;
+          // Filtrar solo las recetas de esta entrega
+          recipes = data
+              .where((r) => r['assignment_id'] == widget.assignmentId)
+              .toList();
+          // Si solo hay una receta, ir directo al detalle
+          if (recipes.length == 1) {
+            selectedRecipeId = recipes.first['id'];
+          }
+        } else {
+          recipes = data;
         }
       });
     } catch (e) {
@@ -58,34 +61,46 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
   Widget build(BuildContext context) {
     final bool showingDetail = selectedRecipeId != null;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(showingDetail ? 'Mi Receta' : 'Mis Recetas'),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (showingDetail && widget.assignmentId == null) {
-              setState(() => selectedRecipeId = null);
-            } else {
-              Navigator.pop(context);
-            }
-          },
+    return PopScope(
+      canPop: !showingDetail || widget.assignmentId != null,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (showingDetail && widget.assignmentId == null) {
+          setState(() => selectedRecipeId = null);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(showingDetail ? 'Mi Receta' : 'Mis Recetas'),
+          backgroundColor: const Color(0xFFE65100),
+          foregroundColor: Colors.white,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (showingDetail && widget.assignmentId == null) {
+                setState(() => selectedRecipeId = null);
+              } else {
+                Navigator.pop(context);
+              }
+            },
+          ),
         ),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : recipes.isEmpty
+                ? _buildEmptyState()
+                : (showingDetail
+                    ? _buildDetail(_findRecipe(selectedRecipeId!))
+                    : _buildList()),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : recipes.isEmpty
-              ? _buildEmptyState()
-              : (showingDetail
-                  ? _buildDetail(_findRecipe(selectedRecipeId!))
-                  : _buildList()),
     );
   }
 
   Map<String, dynamic> _findRecipe(String id) {
-    return recipes.firstWhere((r) => r['id'] == id);
+    return recipes.firstWhere(
+      (r) => r['id'] == id,
+      orElse: () => recipes.isNotEmpty ? recipes.first : {},
+    );
   }
 
   Widget _buildList() {
@@ -324,7 +339,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
       color: Colors.grey[50],
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ExpansionTile(
-        leading: const Icon(Icons.list, color: Colors.orange),
+        leading: Icon(Icons.list, color: Colors.orange),
         title: const Text('Ingredientes', style: TextStyle(fontWeight: FontWeight.bold)),
         initiallyExpanded: true,
         children: ingredients.map<Widget>((ing) {
@@ -345,7 +360,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
       color: Colors.grey[50],
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ExpansionTile(
-        leading: const Icon(Icons.description, color: Colors.orange),
+        leading: Icon(Icons.description, color: Colors.orange),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         initiallyExpanded: initiallyExpanded,
         children: [

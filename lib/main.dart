@@ -1,39 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
+import 'package:remy/providers/auth_provider.dart';
+import 'package:remy/providers/class_provider.dart';
+import 'package:remy/providers/assignment_provider.dart';
+import 'package:remy/providers/enrollment_provider.dart';
+import 'package:remy/services/supabase_service.dart';
 
-// Configuración
-import 'package:remy/config/app_routes.dart';
-import 'package:remy/config/app_theme.dart';
-
-// Vistas de Autenticación
+// ==================== PANTALLAS DE AUTENTICACIÓN ====================
 import 'package:remy/views/auth/login_screen.dart';
 import 'package:remy/views/auth/register_screen.dart';
 
-// Vistas del Profesor
-import 'package:remy/views/professor/dashboard_screen.dart';
-import 'package:remy/views/professor/create_class_screen.dart';
-import 'package:remy/views/professor/class_detail_screen.dart';
-import 'package:remy/views/professor/create_assignment_screen.dart';
-import 'package:remy/views/professor/student_recipe_screen.dart';
-import 'package:remy/views/professor/profile_screen.dart';
+// ==================== PANTALLAS DE PROFESOR ====================
+import 'package:remy/views/mobile/professor/dashboard_screen.dart';
+import 'package:remy/views/mobile/professor/create_class_screen.dart';
+import 'package:remy/views/mobile/professor/class_detail_screen.dart';
+import 'package:remy/views/mobile/professor/create_assignment_screen.dart';
+import 'package:remy/views/mobile/professor/profile_screen.dart';
+import 'package:remy/views/mobile/professor/student_recipe_screen.dart';
 
-// Vistas del Alumno
-import 'package:remy/views/student/my_classes_screen.dart';
+// ==================== PANTALLAS DE ESTUDIANTE ====================
+import 'package:remy/views/student/student_dashboard_screen.dart';
 import 'package:remy/views/student/student_class_detail_screen.dart';
 import 'package:remy/views/student/upload_recipe_screen.dart';
 import 'package:remy/views/student/my_recipes_screen.dart';
-import 'package:remy/views/student/my_grades_screen.dart';
 import 'package:remy/views/student/search_recipes_screen.dart';
+import 'package:remy/views/student/my_grades_screen.dart';
 
-Future<void> main() async {
+// ==================== CONFIGURACIÓN DE RUTAS ====================
+import 'package:remy/config/app_routes.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
 
-  await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
-  );
+  try {
+    final supabaseService = SupabaseService();
+    await supabaseService.init();
+    print('✅ Supabase inicializado correctamente');
+  } catch (e) {
+    print('❌ Error al inicializar Supabase: $e');
+  }
 
   runApp(const MyApp());
 }
@@ -43,101 +48,155 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'REMY',
-      theme: AppTheme.lightTheme,
-      debugShowCheckedModeBanner: false,
-      initialRoute: AppRoutes.login,
-      onGenerateRoute: (settings) {
-        switch (settings.name) {
-          // Ruta raíz que Flutter genera automáticamente junto con
-          // initialRoute (ver Navigator.defaultGenerateInitialRoutes).
-          // Sin este caso, un "pop" que llegue hasta el fondo de la pila
-          // cae en el default y muestra "Ruta no encontrada: /".
-          case '/':
-            return MaterialPageRoute(builder: (_) => const LoginScreen());
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider()..loadCurrentUser(),
+        ),
+        ChangeNotifierProvider(create: (_) => ClassProvider()),
+        ChangeNotifierProvider(create: (_) => AssignmentProvider()),
+        ChangeNotifierProvider(create: (_) => EnrollmentProvider()),
+      ],
+      child: MaterialApp(
+        title: 'Remy',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          primaryColor: const Color(0xFFE65100),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFFE65100),
+            primary: const Color(0xFFE65100),
+          ),
+          fontFamily: 'Roboto',
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFFE65100),
+            foregroundColor: Colors.white,
+            elevation: 0,
+          ),
+        ),
+        home: const AuthWrapper(),
+        routes: {
+          // ========== AUTENTICACIÓN ==========
+          AppRoutes.login: (context) => const LoginScreen(),
+          AppRoutes.register: (context) => const RegisterScreen(),
 
-          // Autenticación
-          case AppRoutes.login:
-            return MaterialPageRoute(builder: (_) => const LoginScreen());
-          case AppRoutes.register:
-            return MaterialPageRoute(builder: (_) => const RegisterScreen());
+          // ========== PROFESOR ==========
+          AppRoutes.professorDashboard: (context) =>
+              const ProfessorDashboardScreen(),
+          AppRoutes.professorCreateClass: (context) =>
+              const CreateClassScreen(),
+          AppRoutes.professorProfile: (context) =>
+              const ProfessorProfileScreen(),
 
-          // Profesor
-          case AppRoutes.dashboard:
-            return MaterialPageRoute(builder: (_) => const DashboardScreen());
-          case AppRoutes.createClass:
-            return MaterialPageRoute(builder: (_) => const CreateClassScreen());
-          case AppRoutes.profile:
-            return MaterialPageRoute(builder: (_) => const ProfileScreen());
-          case AppRoutes.classDetail:
-            final args = settings.arguments as String;
-            return MaterialPageRoute(builder: (_) => ClassDetailScreen(classId: args));
-          case AppRoutes.createAssignment:
-            final args = settings.arguments as String;
-            return MaterialPageRoute(builder: (_) => CreateAssignmentScreen(classId: args));
-          case AppRoutes.studentRecipe:
-            final args = settings.arguments as Map<String, dynamic>;
-            return MaterialPageRoute(
-              builder: (_) => StudentRecipeScreen(
-                studentId: args['studentId'],
-                classId: args['classId'],
-              ),
-            );
-
-          // Alumno
-          case AppRoutes.studentDashboard:
-            return MaterialPageRoute(builder: (_) => const MyClassesScreen());
-          case AppRoutes.studentClassDetail:
-            final args = settings.arguments as String;
-            return MaterialPageRoute(
-              builder: (_) => StudentClassDetailScreen(classId: args),
-            );
-          case AppRoutes.uploadRecipe:
-            final args = settings.arguments as Map<String, dynamic>;
-            return MaterialPageRoute(
-              builder: (_) => UploadRecipeScreen(
-                assignmentId: args['assignmentId'],
-                classId: args['classId'],
-                recipeType: args['recipeType'],
-              ),
-            );
-          case AppRoutes.myRecipes:
-            final args = settings.arguments as Map<String, dynamic>?;
-            return MaterialPageRoute(
-              builder: (_) => MyRecipesScreen(
-                assignmentId: args?['assignmentId'],
-                classId: args?['classId'],
-              ),
-            );
-          case AppRoutes.myGrades:
-            return MaterialPageRoute(builder: (_) => const MyGradesScreen());
-          case AppRoutes.searchRecipes:
-            return MaterialPageRoute(builder: (_) => const SearchRecipesScreen());
-
-          // Fallback
-          default:
-            return MaterialPageRoute(
-              builder: (_) => Scaffold(
-                body: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text('Ruta no encontrada: ${settings.name}', style: const TextStyle(fontSize: 18)),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.login),
-                        child: const Text('Volver al Inicio'),
-                      )
-                    ],
-                  ),
+          // ========== ESTUDIANTE ==========
+          AppRoutes.studentDashboard: (context) =>
+              const StudentDashboardScreen(),
+          AppRoutes.studentSearchRecipes: (context) =>
+              const SearchRecipesScreen(),
+          AppRoutes.studentMyGrades: (context) => const MyGradesScreen(),
+          AppRoutes.studentProfile: (context) =>
+              const ProfessorProfileScreen(), // Reutiliza perfil
+        },
+        onGenerateRoute: (settings) {
+          switch (settings.name) {
+            // ========== PROFESOR ==========
+            case AppRoutes.professorClassDetail:
+              final classId = settings.arguments as String;
+              return MaterialPageRoute(
+                builder: (context) =>
+                    ClassDetailScreen(classId: classId, className: ''),
+              );
+            case AppRoutes.professorCreateAssignment:
+              final classId = settings.arguments as String;
+              return MaterialPageRoute(
+                builder: (context) => CreateAssignmentScreen(classId: classId),
+              );
+            case AppRoutes.professorStudentRecipe:
+              final args = settings.arguments as Map<String, dynamic>;
+              return MaterialPageRoute(
+                builder: (context) => StudentRecipeScreen(
+                  studentId: args['studentId'],
+                  assignmentId: args['assignmentId'],
+                  classId: args['classId'] ?? '',
+                  studentName: args['studentName'] ?? 'Estudiante',
                 ),
-              ),
-            );
-        }
-      },
+              );
+
+            // ========== ESTUDIANTE ==========
+            case AppRoutes.studentClassDetail:
+              final classId = settings.arguments as String;
+              return MaterialPageRoute(
+                builder: (context) =>
+                    StudentClassDetailScreen(classId: classId),
+              );
+            case AppRoutes.studentUploadRecipe:
+              final args = settings.arguments as Map<String, dynamic>;
+              return MaterialPageRoute(
+                builder: (context) => UploadRecipeScreen(
+                  assignmentId: args['assignmentId'],
+                  classId: args['classId'],
+                  recipeType: args['recipeType'] ?? 'Ambos',
+                ),
+              );
+            case AppRoutes.studentMyRecipes:
+              // Si se pasan argumentos (ej. assignmentId, classId)
+              if (settings.arguments is Map<String, dynamic>) {
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(
+                  builder: (context) => MyRecipesScreen(
+                    assignmentId: args['assignmentId'],
+                    classId: args['classId'],
+                  ),
+                );
+              }
+              // Sin argumentos, simplemente muestra todas las recetas
+              return MaterialPageRoute(
+                builder: (context) => const MyRecipesScreen(),
+              );
+
+            default:
+              return MaterialPageRoute(
+                builder: (context) => const Scaffold(
+                  body: Center(child: Text('Ruta no encontrada')),
+                ),
+              );
+          }
+        },
+      ),
     );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+
+    if (authProvider.isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: Color(0xFFE65100)),
+              SizedBox(height: 16),
+              Text('Cargando...', style: TextStyle(color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (!authProvider.isLoggedIn) {
+      return const LoginScreen();
+    }
+
+    final user = authProvider.currentUser;
+    if (user?.role == 'profesor') {
+      return const ProfessorDashboardScreen();
+    } else {
+      return const StudentDashboardScreen();
+    }
   }
 }

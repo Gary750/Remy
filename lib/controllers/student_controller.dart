@@ -1,127 +1,479 @@
-// lib/controllers/student_controller.dart
-import '../config/supabase_client.dart';
+import 'package:remy/services/supabase_service.dart';
 
 class StudentController {
-  /// Une al alumno autenticado a una clase mediante su código de invitación.
-  /// La búsqueda del código no distingue mayúsculas/minúsculas.
-  Future<Map<String, dynamic>> joinClass(String joinCode) async {
-    try {
-      final user = supabase.auth.currentUser;
-      if (user == null) throw 'No hay sesión activa';
+  final SupabaseService _supabase = SupabaseService();
 
-      final code = joinCode.trim().toUpperCase();
-
-      // 1. Buscar la clase por su código
-      final classData = await supabase
-          .from('classes')
-          .select()
-          .eq('join_code', code)
-          .maybeSingle();
-
-      if (classData == null) {
-        throw 'No existe ninguna clase con ese código';
-      }
-
-      // 2. Verificar que no esté ya inscrito
-      final existing = await supabase
-          .from('enrollments')
-          .select('id')
-          .eq('class_id', classData['id'])
-          .eq('student_id', user.id)
-          .maybeSingle();
-
-      if (existing != null) {
-        throw 'Ya estás inscrito en esta clase';
-      }
-
-      // 3. Crear la inscripción
-      await supabase.from('enrollments').insert({
-        'class_id': classData['id'],
-        'student_id': user.id,
-      });
-
-      return classData;
-    } catch (e) {
-      throw e is String ? e : 'Error al unirse a la clase: $e';
-    }
-  }
-
-  /// Clases en las que el alumno autenticado está inscrito.
+  // ==================== CLASES ====================
   Future<List<Map<String, dynamic>>> getMyClasses() async {
     try {
-      final user = supabase.auth.currentUser;
-      if (user == null) throw 'No hay sesión activa';
+      final session = _supabase.supabase.auth.currentSession;
+      if (session == null) return [];
 
-      final response = await supabase
+      final userId = session.user.id;
+
+      final response = await _supabase.supabase
           .from('enrollments')
-          .select('joined_at, classes(*)')
-          .eq('student_id', user.id)
-          .order('joined_at', ascending: false);
+          .select('''
+            class_id,
+            classes!inner (
+              id,
+              subject,
+              term,
+              group_name,
+              join_code,
+              professor_id
+            )
+          ''')
+          .eq('student_id', userId);
 
-      return List<Map<String, dynamic>>.from(response)
-          .map((e) => Map<String, dynamic>.from(e['classes']))
-          .toList();
+      final classes = (response as List).map((e) {
+        final classData = e['classes'] as Map<String, dynamic>;
+        return {
+          'id': classData['id'],
+          'subject': classData['subject'],
+          'term': classData['term'],
+          'group_name': classData['group_name'],
+          'join_code': classData['join_code'],
+          'professor_id': classData['professor_id'],
+        };
+      }).toList();
+
+      return List<Map<String, dynamic>>.from(classes);
     } catch (e) {
-      throw 'Error al cargar tus clases: $e';
+      print('Error al obtener clases del estudiante: $e');
+      return [];
     }
   }
 
-  /// Calificaciones del alumno agrupadas por clase, para "Mis Calificaciones".
-  /// Devuelve una lista de mapas: {class_id, subject, group_name, grades: [...]}
+  Future<bool> joinClass(String code) async {
+    try {
+      final session = _supabase.supabase.auth.currentSession;
+      if (session == null) return false;
+
+      final classResponse = await _supabase.supabase
+          .from('classes')
+          .select('id')
+          .eq('join_code', code.toUpperCase())
+          .maybeSingle();
+
+      if (classResponse == null) return false;
+
+      final classId = classResponse['id'];
+
+      final existing = await _supabase.supabase
+          .from('enrollments')
+          .select()
+          .eq('class_id', classId)
+          .eq('student_id', session.user.id)
+          .maybeSingle();
+
+      if (existing != null) return false;
+
+      await _supabase.supabase.from('enrollments').insert({
+        'class_id': classId,
+        'student_id': session.user.id,
+        'joined_at': DateTime.now().toIso8601String(),
+      });
+
+      return true;
+    } catch (e) {
+      print('Error al unirse a clase: $e');
+      return false;
+    }
+  }
+
+  // ==================== RECETAS ====================
+  Future<List<Map<String, dynamic>>> getMyRecipes() async {
+    try {
+      final session = _supabase.supabase.auth.currentSession;
+      if (session == null) return [];
+
+      final userId = session.user.id;
+
+      final response = await _supabase.supabase
+          .from('recipes')
+          .select('''
+            *,
+            assignments!inner (
+              title,
+              class_id,
+              classes!inner (
+                subject,
+                term,
+                group_name
+              )
+            )
+          ''')
+          .eq('student_id', userId)
+          .order('created_at', ascending: false);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      print('Error al obtener recetas: $e');
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> getRecipeDetail(String recipeId) async {
+    try {
+      final response = await _supabase.supabase
+          .from('recipes')
+          .select('''
+            *,
+            assignments!inner (
+              title,
+              class_id,
+              classes!inner (
+                subject,
+                term,
+                group_name
+              )
+            )
+          ''')
+          .eq('id', recipeId)
+          .maybeSingle();
+
+      return response;
+    } catch (e) {
+      print('Error al obtener detalle de receta: $e');
+      return null;
+    }
+  }
+
+  Future<bool> uploadRecipe({
+    required String assignmentId,
+    required String name,
+    required String type,
+    String? country,
+    String? region,
+    String? imageUrl,
+    String? cookingStyle,
+    String? miseEnPlace,
+    String? ingredients,
+    String? sauce,
+    String? procedure,
+  }) async {
+    try {
+      final session = _supabase.supabase.auth.currentSession;
+      if (session == null) return false;
+
+      await _supabase.supabase.from('recipes').insert({
+        'assignment_id': assignmentId,
+        'student_id': session.user.id,
+        'name': name,
+        'type': type,
+        'country': country ?? '',
+        'region': region ?? '',
+        'image_url': imageUrl ?? '',
+        'cooking_style': cookingStyle ?? '',
+        'mise_en_place': miseEnPlace ?? '',
+        'ingredients': ingredients ?? '',
+        'sauce': sauce ?? '',
+        'procedure': procedure ?? '',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      return true;
+    } catch (e) {
+      print('Error al subir receta: $e');
+      return false;
+    }
+  }
+
+  // ==================== CALIFICACIONES ====================
+  // FIX: 'grades' no tiene columnas score/feedback/graded_at -- el schema
+  // real solo tiene 'stars' (int 1-5). Tampoco existe una FK directa de
+  // 'grades' hacia 'recipes' para poder usar un embed anidado de PostgREST
+  // (grades se relaciona por (assignment_id, student_id)), así que se
+  // resuelve con una segunda consulta y se combina en Dart.
   Future<List<Map<String, dynamic>>> getMyGrades() async {
     try {
-      final user = supabase.auth.currentUser;
-      if (user == null) throw 'No hay sesión activa';
+      final session = _supabase.supabase.auth.currentSession;
+      if (session == null) return [];
 
-      // Trae todas las entregas de las clases del alumno junto con su
-      // receta (si la subió) y su calificación (si ya fue calificada).
-      final response = await supabase
-          .from('assignments')
+      final userId = session.user.id;
+
+      final recipesResponse = await _supabase.supabase
+          .from('recipes')
           .select('''
             id,
-            title,
-            classes!inner(id, subject, group_name, enrollments!inner(student_id)),
-            recipes(id, name, student_id),
-            grades(stars, student_id)
+            name,
+            type,
+            created_at,
+            assignment_id,
+            assignments!inner (
+              id,
+              title,
+              class_id,
+              classes!inner (
+                subject,
+                term,
+                group_name
+              )
+            )
           ''')
-          .eq('classes.enrollments.student_id', user.id);
+          .eq('student_id', userId)
+          .order('created_at', ascending: false);
 
-      final Map<String, Map<String, dynamic>> grouped = {};
+      final recipes = List<Map<String, dynamic>>.from(recipesResponse);
+      if (recipes.isEmpty) return [];
 
-      for (final row in List<Map<String, dynamic>>.from(response)) {
-        final classInfo = row['classes'];
-        final classId = classInfo['id'];
+      final assignmentIds = recipes
+          .map((r) => r['assignment_id'])
+          .toSet()
+          .toList();
 
-        // Filtra solo la receta y calificación que pertenecen a este alumno
-        final recipes = List<Map<String, dynamic>>.from(row['recipes'] ?? []);
-        final myRecipe = recipes.firstWhere(
-          (r) => r['student_id'] == user.id,
-          orElse: () => {},
-        );
+      final gradesResponse = await _supabase.supabase
+          .from('grades')
+          .select('assignment_id, stars')
+          .eq('student_id', userId)
+          .inFilter('assignment_id', assignmentIds);
 
-        final grades = List<Map<String, dynamic>>.from(row['grades'] ?? []);
-        final myGrade = grades.firstWhere(
-          (g) => g['student_id'] == user.id,
-          orElse: () => {},
-        );
+      final gradesMap = {
+        for (final g in List<Map<String, dynamic>>.from(gradesResponse))
+          g['assignment_id']: g['stars'],
+      };
 
-        grouped.putIfAbsent(classId, () => {
-              'class_id': classId,
-              'subject': classInfo['subject'],
-              'group_name': classInfo['group_name'],
-              'grades': <Map<String, dynamic>>[],
-            });
+      return recipes
+          .map((r) => {...r, 'stars': gradesMap[r['assignment_id']]})
+          .toList();
+    } catch (e) {
+      print('Error al obtener calificaciones: $e');
+      return [];
+    }
+  }
 
-        grouped[classId]!['grades'].add({
-          'assignment_title': row['title'],
-          'recipe_name': myRecipe.isNotEmpty ? myRecipe['name'] : null,
-          'stars': myGrade.isNotEmpty ? myGrade['stars'] : null,
+  Future<Map<String, dynamic>?> getGradeDetail(String recipeId) async {
+    try {
+      final recipe = await _supabase.supabase
+          .from('recipes')
+          .select('''
+            *,
+            assignments!inner (
+              title,
+              class_id,
+              classes!inner (
+                subject,
+                term,
+                group_name
+              )
+            )
+          ''')
+          .eq('id', recipeId)
+          .maybeSingle();
+
+      if (recipe == null) return null;
+
+      final grade = await _supabase.supabase
+          .from('grades')
+          .select('stars')
+          .eq('assignment_id', recipe['assignment_id'])
+          .eq('student_id', recipe['student_id'])
+          .maybeSingle();
+
+      return {...recipe, 'stars': grade?['stars']};
+    } catch (e) {
+      print('Error al obtener detalle de calificación: $e');
+      return null;
+    }
+  }
+
+  // ==================== BÚSQUEDA DE RECETAS ====================
+  Future<List<Map<String, dynamic>>> searchRecipes({
+    String? query,
+    String? type,
+    String? country,
+    String? cookingStyle,
+  }) async {
+    try {
+      var request = _supabase.supabase.from('recipes').select('''
+            *,
+            profiles!inner (
+              full_name
+            ),
+            assignments!inner (
+              title,
+              classes!inner (
+                subject
+              )
+            )
+          ''');
+
+      if (query != null && query.isNotEmpty) {
+        request = request.ilike('name', '%$query%');
+      }
+
+      if (type != null && type.isNotEmpty) {
+        request = request.eq('type', type);
+      }
+
+      if (country != null && country.isNotEmpty) {
+        request = request.eq('country', country);
+      }
+
+      if (cookingStyle != null && cookingStyle.isNotEmpty) {
+        request = request.eq('cooking_style', cookingStyle);
+      }
+
+      final response = await request.order('created_at', ascending: false);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      print('Error al buscar recetas: $e');
+      return [];
+    }
+  }
+
+  // ==================== DETALLE DE CLASE (ESTUDIANTE) ====================
+  // FIX: se quitó el embed anidado assignments->recipes->grades(score) que
+  // no existe y que además no se estaba usando en ninguna pantalla.
+  Future<Map<String, dynamic>?> getClassDetail(String classId) async {
+    try {
+      final response = await _supabase.supabase
+          .from('classes')
+          .select()
+          .eq('id', classId)
+          .maybeSingle();
+
+      return response;
+    } catch (e) {
+      print('Error al obtener detalle de clase: $e');
+      return null;
+    }
+  }
+
+  // FIX: se quitó el embed grades(score) inválido. Además, antes se
+  // regresaban las recetas de TODOS los alumnos de la clase dentro de cada
+  // assignment, lo que hacía que "Entregado" apareciera aunque el alumno
+  // actual no hubiera subido nada (bastaba con que un compañero sí lo
+  // hubiera hecho). Ahora se filtran solo las recetas del alumno en sesión
+  // y se agrega su calificación (stars) por separado.
+  Future<List<Map<String, dynamic>>> getClassAssignments(String classId) async {
+    try {
+      final session = _supabase.supabase.auth.currentSession;
+      final userId = session?.user.id;
+
+      final response = await _supabase.supabase
+          .from('assignments')
+          .select('''
+            *,
+            recipes (
+              id,
+              student_id,
+              created_at
+            )
+          ''')
+          .eq('class_id', classId)
+          .order('created_at', ascending: false);
+
+      final assignments = List<Map<String, dynamic>>.from(response);
+      if (assignments.isEmpty) return [];
+
+      Map<dynamic, dynamic> gradesMap = {};
+      if (userId != null) {
+        final assignmentIds = assignments.map((a) => a['id']).toList();
+        final gradesResponse = await _supabase.supabase
+            .from('grades')
+            .select('assignment_id, stars')
+            .eq('student_id', userId)
+            .inFilter('assignment_id', assignmentIds);
+        gradesMap = {
+          for (final g in List<Map<String, dynamic>>.from(gradesResponse))
+            g['assignment_id']: g['stars'],
+        };
+      }
+
+      return assignments.map((a) {
+        final allRecipes = List<Map<String, dynamic>>.from(a['recipes'] ?? []);
+        final myRecipes = userId == null
+            ? <Map<String, dynamic>>[]
+            : allRecipes.where((r) => r['student_id'] == userId).toList();
+
+        return {
+          ...a,
+          'recipes': myRecipes, // solo las del alumno en sesión
+          'stars': gradesMap[a['id']],
+        };
+      }).toList();
+    } catch (e) {
+      print('Error al obtener entregas de clase: $e');
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> getMySubmission({
+    required String assignmentId,
+  }) async {
+    try {
+      final session = _supabase.supabase.auth.currentSession;
+      if (session == null) return null;
+      final userId = session.user.id;
+
+      final recipe = await _supabase.supabase
+          .from('recipes')
+          .select()
+          .eq('assignment_id', assignmentId)
+          .eq('student_id', userId)
+          .maybeSingle();
+
+      if (recipe == null) return null;
+
+      final grade = await _supabase.supabase
+          .from('grades')
+          .select('stars')
+          .eq('assignment_id', assignmentId)
+          .eq('student_id', userId)
+          .maybeSingle();
+
+      return {...recipe, 'stars': grade?['stars']};
+    } catch (e) {
+      print('Error al obtener mi entrega: $e');
+      return null;
+    }
+  }
+
+  // ==================== SUBIR RECETARIO COMPLETO ====================
+  // NOTA: este método no está siendo llamado por ninguna pantalla en este
+  // momento (upload_recipe_screen.dart usa RecipeController.createRecipe,
+  // una receta a la vez). Si van a usar "recetario con varias recetas",
+  // revisen que 'ingredients' vaya como List/Map real (jsonb), no String,
+  // igual que en upload_recipe_screen.dart.
+  Future<bool> submitRecipes({
+    required String assignmentId,
+    required List<Map<String, dynamic>> recipes,
+  }) async {
+    try {
+      final session = _supabase.supabase.auth.currentSession;
+      if (session == null) return false;
+
+      await _supabase.supabase
+          .from('recipes')
+          .delete()
+          .eq('assignment_id', assignmentId)
+          .eq('student_id', session.user.id);
+
+      for (final recipe in recipes) {
+        await _supabase.supabase.from('recipes').insert({
+          'assignment_id': assignmentId,
+          'student_id': session.user.id,
+          'name': recipe['name'] ?? '',
+          'type': recipe['type'] ?? 'Comida',
+          'country': recipe['country'] ?? '',
+          'region': recipe['region'] ?? '',
+          'image_url': recipe['image_url'] ?? '',
+          'cooking_style': recipe['cooking_style'] ?? '',
+          'mise_en_place': recipe['mise_en_place'] ?? '',
+          'ingredients': recipe['ingredients'] ?? '',
+          'sauce': recipe['sauce'] ?? '',
+          'procedure': recipe['procedure'] ?? '',
+          'created_at': DateTime.now().toIso8601String(),
         });
       }
 
-      return grouped.values.toList();
+      return true;
     } catch (e) {
-      throw 'Error al cargar tus calificaciones: $e';
+      print('Error al enviar recetario: $e');
+      return false;
     }
   }
 }

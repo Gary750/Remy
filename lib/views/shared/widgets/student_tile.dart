@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 class StudentTile extends StatelessWidget {
   final String name;
-  final String status;
+  final String email;
+  final String? status;
   final double? grade;
   final VoidCallback onTap;
   final String? avatarUrl;
@@ -10,107 +11,97 @@ class StudentTile extends StatelessWidget {
   const StudentTile({
     super.key,
     required this.name,
-    required this.status,
+    required this.email,
+    this.status,
     this.grade,
     required this.onTap,
     this.avatarUrl,
   });
 
+  Color _getStatusColor() {
+    if (status == 'Entregado') return Colors.green;
+    if (status == 'Pendiente') return Colors.orange;
+    return Colors.red;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      elevation: 0,
-      color: Colors.transparent,
-      child: InkWell(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: _getStatusColor(status).withOpacity(0.05),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: _getStatusColor(status).withOpacity(0.2),
-            ),
+        leading: CircleAvatar(
+          backgroundColor: Colors.grey.shade200,
+          backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl!) : null,
+          child: avatarUrl == null
+              ? Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.bold,
+                  ),
+                )
+              : null,
+        ),
+        title: Text(
+          name,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
+        subtitle: Text(
+          email,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
           ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: Colors.grey[300],
-                backgroundImage: avatarUrl != null 
-                    ? NetworkImage(avatarUrl!) 
-                    : null,
-                child: avatarUrl == null
-                    ? Icon(Icons.person, color: Colors.grey[600])
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      status,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: _getStatusColor(status),
-                      ),
-                    ),
-                  ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (status != null)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
                 ),
-              ),
-              if (grade != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getGradeColor(grade!),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    grade!.toStringAsFixed(1),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+                decoration: BoxDecoration(
+                  color: _getStatusColor().withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _getStatusColor()),
+                ),
+                child: Text(
+                  status!,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: _getStatusColor(),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Colors.grey[400],
+              ),
+            if (grade != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade300),
+                ),
+                child: Text(
+                  grade!.toStringAsFixed(1),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.blue.shade700,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
-          ),
+          ],
         ),
       ),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Entregado':
-        return Colors.green;
-      case 'Pendiente':
-        return Colors.orange;
-      case 'No entregado':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  Color _getGradeColor(double grade) {
-    if (grade >= 9) return Colors.green;
-    if (grade >= 7) return Colors.orange;
-    return Colors.red;
   }
 }

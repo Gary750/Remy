@@ -3,81 +3,80 @@ import 'package:flutter/material.dart';
 class CustomButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
-  final Color? backgroundColor;
-  final Color? textColor;
   final bool isLoading;
   final bool isOutlined;
-  final IconData? icon;
-  final double width;
+  final Color? backgroundColor;
+  final Color? textColor;
+  final double? width;
 
   const CustomButton({
     super.key,
     required this.text,
     required this.onPressed,
-    this.backgroundColor,
-    this.textColor,
     this.isLoading = false,
     this.isOutlined = false,
-    this.icon,
-    this.width = double.infinity,
+    this.backgroundColor,
+    this.textColor,
+    this.width,
   });
 
   @override
   Widget build(BuildContext context) {
+    final color = backgroundColor ?? const Color(0xFFE65100);
+
     if (isOutlined) {
-      return OutlinedButton.icon(
+      return OutlinedButton(
         onPressed: isLoading ? null : onPressed,
-        icon: icon != null ? Icon(icon) : const SizedBox.shrink(),
-        label: isLoading
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: color),
+          minimumSize: Size(width ?? double.infinity, 50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: isLoading
             ? const SizedBox(
                 height: 20,
                 width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                ),
+                child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : Text(text),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: textColor ?? Colors.orange,
-          minimumSize: Size(width, 50),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
+            : Text(
+                text,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
       );
     }
 
     return ElevatedButton(
       onPressed: isLoading ? null : onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: backgroundColor ?? Colors.orange,
-        foregroundColor: textColor ?? Colors.white,
-        minimumSize: Size(width, 50),
+        backgroundColor: color,
+        minimumSize: Size(width ?? double.infinity, 50),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
         ),
+        elevation: 2,
       ),
       child: isLoading
           ? const SizedBox(
               height: 20,
               width: 20,
               child: CircularProgressIndicator(
-                color: Colors.white,
                 strokeWidth: 2,
+                color: Colors.white,
               ),
             )
-          : Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (icon != null) ...[
-                  Icon(icon, size: 20),
-                  const SizedBox(width: 8),
-                ],
-                Text(
-                  text,
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ],
+          : Text(
+              text,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
             ),
     );
   }

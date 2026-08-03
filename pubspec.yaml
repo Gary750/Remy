@@ -1,5 +1,5 @@
 name: remy
-description: "A new Flutter project."
+description: "Aplicación para compartir y evaluar recetas de cocina"
 publish_to: 'none'
 version: 0.1.0
 
@@ -9,16 +9,39 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  
+  # ========== SUPABASE ==========
   supabase_flutter: ^2.16.0 
+  
+  # ========== VARIABLES DE ENTORNO ==========
   flutter_dotenv: ^6.0.1
+  
+  # ========== STATE MANAGEMENT (IMPORTANTE) ==========
+  provider: ^6.1.1
+  
+  # ========== IMÁGENES ==========
   image_picker: ^1.1.2
+  
+  # ========== FECHAS ==========
+  intl: ^0.19.0
+  
+  # ========== UI ==========
+  flutter_svg: ^2.0.10
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
 
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icons/icon.png"
+
 flutter:
   uses-material-design: true
+  
   assets:
     - .env
+    - assets/images/

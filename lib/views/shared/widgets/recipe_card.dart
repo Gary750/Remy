@@ -1,148 +1,130 @@
 import 'package:flutter/material.dart';
 
 class RecipeCard extends StatelessWidget {
-  final String recipeName;
-  final String category;
-  final double? rating;
-  final String? imageUrl;
-  final VoidCallback onTap;
-  final bool showRating;
-  final bool isStudent;
+  final Map<String, dynamic> recipe;
 
   const RecipeCard({
     super.key,
-    required this.recipeName,
-    required this.category,
-    this.rating,
-    this.imageUrl,
-    required this.onTap,
-    this.showRating = true,
-    this.isStudent = false,
+    required this.recipe,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      elevation: 4,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Row(
-          children: [
-            // Imagen
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  bottomLeft: Radius.circular(12),
-                ),
-                image: imageUrl != null
-                    ? DecorationImage(
-                        image: NetworkImage(imageUrl!),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Imagen
+          Container(
+            height: 200,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
               ),
-              child: imageUrl == null
-                  ? Icon(
-                      category == 'Comida' 
-                          ? Icons.restaurant 
-                          : Icons.local_drink,
-                      size: 40,
-                      color: Colors.grey[400],
+              color: Colors.grey.shade200,
+              image: recipe['image_url'] != null
+                  ? DecorationImage(
+                      image: NetworkImage(recipe['image_url']!),
+                      fit: BoxFit.cover,
                     )
                   : null,
             ),
-            // Información
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            child: recipe['image_url'] == null
+                ? Icon(
+                    Icons.restaurant,
+                    size: 60,
+                    color: Colors.grey.shade400,
+                  )
+                : null,
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      recipeName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                    Expanded(
+                      child: Text(
+                        recipe['name'] ?? 'Receta sin nombre',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
+                        color: recipe['type'] == 'Comida'
+                            ? Colors.orange.shade100
+                            : Colors.blue.shade100,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        category,
+                        recipe['type'] ?? 'Comida',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.orange[700],
+                          fontWeight: FontWeight.w500,
+                          color: recipe['type'] == 'Comida'
+                              ? Colors.orange.shade800
+                              : Colors.blue.shade800,
                         ),
                       ),
                     ),
-                    if (showRating && rating != null) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.star,
-                            size: 16,
-                            color: _getRatingColor(rating!),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            rating!.toStringAsFixed(1),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: _getRatingColor(rating!),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (isStudent && rating == null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        'Sin evaluar',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[400],
-                        ),
-                      ),
-                    ],
                   ],
                 ),
-              ),
+                const SizedBox(height: 12),
+
+                // Ingredientes
+                const Text(
+                  'Ingredientes',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  recipe['ingredients'] ?? 'No especificados',
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Procedimiento
+                const Text(
+                  'Procedimiento',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  recipe['procedure'] ?? 'No especificado',
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Colors.grey[400],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
-  }
-
-  Color _getRatingColor(double rating) {
-    if (rating >= 9) return Colors.green;
-    if (rating >= 7) return Colors.orange;
-    return Colors.red;
   }
 }
