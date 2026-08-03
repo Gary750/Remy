@@ -65,7 +65,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Registro exitoso'),
+            content: Text('Registro exitoso'),
             backgroundColor: Colors.green,
           ),
         );
@@ -214,11 +214,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 items: const [
                   DropdownMenuItem(
                     value: 'alumno',
-                    child: Text('👨‍🎓 Estudiante'),
+                    child: Text('Estudiante'),
                   ),
                   DropdownMenuItem(
                     value: 'profesor',
-                    child: Text('👨‍🏫 Profesor'),
+                    child: Text('Profesor'),
                   ),
                 ],
                 onChanged: (value) {

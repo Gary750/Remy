@@ -145,9 +145,20 @@ class _StudentRecipeBookScreenState extends State<StudentRecipeBookScreen> {
   @override
   Widget build(BuildContext context) {
     if (_selectedRecipeId != null) {
-      final recipe =
-          _allRecipes.firstWhere((r) => r['id'] == _selectedRecipeId);
-      return _buildDetailView(recipe);
+      final recipe = _allRecipes.firstWhere(
+        (r) => r['id'] == _selectedRecipeId,
+        orElse: () => {},
+      );
+      if (recipe.isNotEmpty) {
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            setState(() => _selectedRecipeId = null);
+          },
+          child: _buildDetailView(recipe),
+        );
+      }
     }
 
     return Column(

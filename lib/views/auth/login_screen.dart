@@ -37,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
     // Validar campos vacíos
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       setState(() {
-        _errorMessage = '❌ Por favor ingresa tu correo y contraseña';
+        _errorMessage = 'Por favor ingresa tu correo y contraseña';
       });
       return;
     }
@@ -73,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // Si falla, mostrar el error del provider
       if (mounted) {
         setState(() {
-          _errorMessage = authProvider.error ?? '❌ Credenciales incorrectas';
+          _errorMessage = authProvider.error ?? 'Credenciales incorrectas';
           _isLoading = false;
         });
       }
@@ -82,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // Error inesperado
       if (mounted) {
         setState(() {
-          _errorMessage = '❌ Error al iniciar sesión. Intenta de nuevo.';
+          _errorMessage = 'Error al iniciar sesión. Intenta de nuevo.';
           _isLoading = false;
         });
       }

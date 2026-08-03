@@ -43,5 +43,5 @@ class ClassModel {
     );
   }
 
-  String get displayName => '$subject -- Grupo $groupName';
+  String get displayName => '$subject - Grupo $groupName';
 }

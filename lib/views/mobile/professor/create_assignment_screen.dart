@@ -296,7 +296,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ Entrega creada exitosamente'),
+          content: Text('Entrega creada exitosamente'),
           backgroundColor: Colors.green,
         ),
       );

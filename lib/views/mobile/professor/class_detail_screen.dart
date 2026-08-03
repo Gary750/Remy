@@ -73,6 +73,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       final enrollmentProvider = Provider.of<EnrollmentProvider>(context, listen: false);
       await enrollmentProvider.loadStudents(widget.classId);
       
+      if (!mounted) return;
       final assignmentProvider = Provider.of<AssignmentProvider>(context, listen: false);
       await assignmentProvider.loadAssignments(widget.classId);
       _activeAssignment = assignmentProvider.activeAssignment;
@@ -156,23 +157,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     }
   }
 
-  Future<String> _getStudentStatus(String studentId) async {
-    if (_activeAssignment == null) return 'No entregado';
-    
-    try {
-      final response = await _supabase.supabase
-          .from('recipes')
-          .select('id')
-          .eq('assignment_id', _activeAssignment!.id)
-          .eq('student_id', studentId)
-          .maybeSingle();
-      
-      return response != null ? 'Entregado' : 'Pendiente';
-    } catch (e) {
-      return 'Pendiente';
-    }
-  }
-
   Future<double> _getStudentGrade(String studentId) async {
     if (_activeAssignment == null) return 0.0;
     
@@ -217,7 +201,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       Clipboard.setData(ClipboardData(text: _classCode!));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('📋 Código "$_classCode" copiado'),
+          content: Text('Código "$_classCode" copiado'),
           backgroundColor: Colors.green,
           duration: const Duration(seconds: 2),
         ),
@@ -269,18 +253,16 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     }
   }
 
-  String _getStatusIcon(String status) {
+  IconData _getStatusMaterialIcon(String status) {
     switch (status) {
       case 'Entregado':
-        return '✅';
+        return Icons.check_circle_outline;
       case 'Pendiente':
-        return '⏳';
+        return Icons.access_time;
       case 'No entregado':
-        return '❌';
-      case 'Sin entrega activa':
-        return '📌';
+        return Icons.highlight_off;
       default:
-        return '📌';
+        return Icons.push_pin_outlined;
     }
   }
 
@@ -333,9 +315,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     final noEntregados = _countByStatus('No entregado');
     final sinEntrega = _countByStatus('Sin entrega activa');
     final filteredStudents = _filteredStudents;
-    final daysRemaining = activeAssignment != null 
-        ? activeAssignment.dueDate.difference(DateTime.now()).inDays 
-        : 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -407,7 +386,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      '📝 ${activeAssignment.title}',
+                                      activeAssignment.title,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
@@ -644,7 +623,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                             final matricula = student['matricula'];
                             final calificacion = student['calificacion'] as double;
                             final statusColor = _getStatusColor(status);
-                            final statusIcon = _getStatusIcon(status);
+                            final statusIcon = _getStatusMaterialIcon(status);
                             final hasGrade = calificacion > 0;
                             final submissionDate = student['submission_date'];
                             final hasSubmission = student['has_submission'] ?? false;
@@ -659,21 +638,21 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                         classId: widget.classId,
                                         studentId: student['student_id'],
                                         studentName: student['full_name'],
-                                        assignmentId: activeAssignment?.id,
+                                        assignmentId: activeAssignment.id,
                                       ),
                                     ),
                                   ).then((_) => _loadData());
                                 } else if (activeAssignment == null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('📌 No hay entrega activa'),
+                                      content: Text('No hay entrega activa'),
                                       backgroundColor: Colors.orange,
                                     ),
                                   );
                                 } else {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('⏳ Este alumno aún no ha entregado su recetario'),
+                                      content: Text('Este alumno aún no ha entregado su recetario'),
                                       backgroundColor: Colors.orange,
                                     ),
                                   );
@@ -747,10 +726,11 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Text(
-                                              statusIcon,
-                                              style: const TextStyle(fontSize: 10),
-                                            ),
+                                             Icon(
+                                               statusIcon,
+                                               size: 11,
+                                               color: statusColor,
+                                             ),
                                             const SizedBox(width: 2),
                                             Flexible(
                                               child: Text(

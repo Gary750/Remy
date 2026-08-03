@@ -61,34 +61,46 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
   Widget build(BuildContext context) {
     final bool showingDetail = selectedRecipeId != null;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(showingDetail ? 'Mi Receta' : 'Mis Recetas'),
-        backgroundColor: const Color(0xFFE65100),
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (showingDetail && widget.assignmentId == null) {
-              setState(() => selectedRecipeId = null);
-            } else {
-              Navigator.pop(context);
-            }
-          },
+    return PopScope(
+      canPop: !showingDetail || widget.assignmentId != null,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (showingDetail && widget.assignmentId == null) {
+          setState(() => selectedRecipeId = null);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(showingDetail ? 'Mi Receta' : 'Mis Recetas'),
+          backgroundColor: const Color(0xFFE65100),
+          foregroundColor: Colors.white,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (showingDetail && widget.assignmentId == null) {
+                setState(() => selectedRecipeId = null);
+              } else {
+                Navigator.pop(context);
+              }
+            },
+          ),
         ),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : recipes.isEmpty
+                ? _buildEmptyState()
+                : (showingDetail
+                    ? _buildDetail(_findRecipe(selectedRecipeId!))
+                    : _buildList()),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : recipes.isEmpty
-              ? _buildEmptyState()
-              : (showingDetail
-                  ? _buildDetail(_findRecipe(selectedRecipeId!))
-                  : _buildList()),
     );
   }
 
   Map<String, dynamic> _findRecipe(String id) {
-    return recipes.firstWhere((r) => r['id'] == id);
+    return recipes.firstWhere(
+      (r) => r['id'] == id,
+      orElse: () => recipes.isNotEmpty ? recipes.first : {},
+    );
   }
 
   Widget _buildList() {

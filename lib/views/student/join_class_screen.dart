@@ -45,8 +45,9 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
 
       if (success) {
         widget.onJoined();
+        final messenger = ScaffoldMessenger.of(context);
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(
             content: Text('Te has unido a la clase'),
             backgroundColor: Colors.green,
