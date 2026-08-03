@@ -150,7 +150,14 @@ class _StudentRecipeBookScreenState extends State<StudentRecipeBookScreen> {
         orElse: () => {},
       );
       if (recipe.isNotEmpty) {
-        return _buildDetailView(recipe);
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            setState(() => _selectedRecipeId = null);
+          },
+          child: _buildDetailView(recipe),
+        );
       }
     }
 
