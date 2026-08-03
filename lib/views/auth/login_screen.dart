@@ -144,22 +144,33 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Logo
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE65100),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'R',
-                            style: TextStyle(
-                              fontSize: 40,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.asset(
+                          'assets/icons/icon.png',
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE65100),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  'R',
+                                  style: TextStyle(
+                                    fontSize: 40,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                       const SizedBox(height: 16),
