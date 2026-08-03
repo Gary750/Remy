@@ -73,6 +73,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       final enrollmentProvider = Provider.of<EnrollmentProvider>(context, listen: false);
       await enrollmentProvider.loadStudents(widget.classId);
       
+      if (!mounted) return;
       final assignmentProvider = Provider.of<AssignmentProvider>(context, listen: false);
       await assignmentProvider.loadAssignments(widget.classId);
       _activeAssignment = assignmentProvider.activeAssignment;
@@ -153,23 +154,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       return response;
     } catch (e) {
       return null;
-    }
-  }
-
-  Future<String> _getStudentStatus(String studentId) async {
-    if (_activeAssignment == null) return 'No entregado';
-    
-    try {
-      final response = await _supabase.supabase
-          .from('recipes')
-          .select('id')
-          .eq('assignment_id', _activeAssignment!.id)
-          .eq('student_id', studentId)
-          .maybeSingle();
-      
-      return response != null ? 'Entregado' : 'Pendiente';
-    } catch (e) {
-      return 'Pendiente';
     }
   }
 
@@ -333,9 +317,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     final noEntregados = _countByStatus('No entregado');
     final sinEntrega = _countByStatus('Sin entrega activa');
     final filteredStudents = _filteredStudents;
-    final daysRemaining = activeAssignment != null 
-        ? activeAssignment.dueDate.difference(DateTime.now()).inDays 
-        : 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -659,7 +640,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                         classId: widget.classId,
                                         studentId: student['student_id'],
                                         studentName: student['full_name'],
-                                        assignmentId: activeAssignment?.id,
+                                        assignmentId: activeAssignment.id,
                                       ),
                                     ),
                                   ).then((_) => _loadData());

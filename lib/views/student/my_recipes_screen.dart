@@ -88,7 +88,10 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
   }
 
   Map<String, dynamic> _findRecipe(String id) {
-    return recipes.firstWhere((r) => r['id'] == id);
+    return recipes.firstWhere(
+      (r) => r['id'] == id,
+      orElse: () => recipes.isNotEmpty ? recipes.first : {},
+    );
   }
 
   Widget _buildList() {

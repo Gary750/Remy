@@ -90,7 +90,6 @@ class MyApp extends StatelessWidget {
           // ========== ESTUDIANTE ==========
           AppRoutes.studentDashboard: (context) =>
               const StudentDashboardScreen(),
-          AppRoutes.studentMyRecipes: (context) => const MyRecipesScreen(),
           AppRoutes.studentSearchRecipes: (context) =>
               const SearchRecipesScreen(),
           AppRoutes.studentMyGrades: (context) => const MyGradesScreen(),

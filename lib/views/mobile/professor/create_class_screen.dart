@@ -53,7 +53,6 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
     final classProvider = Provider.of<ClassProvider>(context);
 
     return Scaffold(

@@ -26,11 +26,10 @@ class AssignmentProvider extends ChangeNotifier {
       final data = await _supabase.getClassAssignments(classId);
       _assignments = data.map((e) => AssignmentModel.fromJson(e)).toList();
 
-      try {
-        _activeAssignment = _assignments.firstWhere((a) => a.isActive);
-      } catch (e) {
-        _activeAssignment = null;
-      }
+      _activeAssignment = _assignments.cast<AssignmentModel?>().firstWhere(
+        (a) => a?.isActive ?? false,
+        orElse: () => null,
+      );
     } catch (e) {
       _error = 'Error al cargar entregas: $e';
     } finally {

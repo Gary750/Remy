@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:remy/services/supabase_service.dart';
 import 'package:remy/views/shared/widgets/loading_widget.dart';
 
@@ -156,6 +155,8 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
           .eq('recipe_id', recipeId)
           .maybeSingle();
 
+      if (!mounted) return;
+
       if (existingGrade != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -179,6 +180,8 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
             'student_id': widget.studentId,
           });
 
+      if (!mounted) return;
+
       setState(() {
         _currentGrade = rating;
         _isGraded = true;
@@ -193,6 +196,7 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
       );
 
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
