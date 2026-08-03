@@ -1,11 +1,11 @@
 {
-    "name": "remy",
-    "short_name": "remy",
+    "name": "Remy",
+    "short_name": "Remy",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#E65100",
+    "theme_color": "#E65100",
+    "description": "Aplicación para compartir y evaluar recetas de cocina.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
