@@ -118,7 +118,7 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Confirmar calificación'),
         content: Text(
-          '¿Estás seguro de calificar este recetario con $rating estrellas?\n\n⚠️ Una vez calificado, NO se podrá modificar.',
+          '¿Estás seguro de calificar este recetario con $rating estrellas?\n\nUna vez calificado, NO se podrá modificar.',
           style: TextStyle(fontSize: 14),
         ),
         shape: RoundedRectangleBorder(
@@ -160,7 +160,7 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
       if (existingGrade != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('⚠️ Este recetario ya está calificado'),
+            content: Text('Este recetario ya está calificado'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -190,7 +190,7 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✅ Calificación de ${rating.toStringAsFixed(0)} estrellas guardada'),
+          content: Text('Calificación de ${rating.toStringAsFixed(0)} estrellas guardada'),
           backgroundColor: Colors.green,
         ),
       );
@@ -202,7 +202,7 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ Error al calificar: $e'),
+          content: Text('Error al calificar: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -381,7 +381,7 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
               child: Column(
                 children: [
                   const Text(
-                    '⭐ Calificar recetario',
+                    'Calificar recetario',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -426,7 +426,7 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '⚠️ Una vez calificado, NO se podrá modificar',
+                            'Una vez calificado, NO se podrá modificar',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.orange.shade700,
@@ -455,7 +455,7 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
                   const Icon(Icons.lock_outline, color: Colors.green),
                   const SizedBox(width: 8),
                   Text(
-                    '✅ Calificado: ${_currentGrade?.toStringAsFixed(0) ?? 0} estrellas',
+                    'Calificado: ${_currentGrade?.toStringAsFixed(0) ?? 0} estrellas',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.green.shade700,

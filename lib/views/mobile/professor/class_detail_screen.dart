@@ -201,7 +201,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       Clipboard.setData(ClipboardData(text: _classCode!));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('📋 Código "$_classCode" copiado'),
+          content: Text('Código "$_classCode" copiado'),
           backgroundColor: Colors.green,
           duration: const Duration(seconds: 2),
         ),
@@ -253,18 +253,16 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     }
   }
 
-  String _getStatusIcon(String status) {
+  IconData _getStatusMaterialIcon(String status) {
     switch (status) {
       case 'Entregado':
-        return '✅';
+        return Icons.check_circle_outline;
       case 'Pendiente':
-        return '⏳';
+        return Icons.access_time;
       case 'No entregado':
-        return '❌';
-      case 'Sin entrega activa':
-        return '📌';
+        return Icons.highlight_off;
       default:
-        return '📌';
+        return Icons.push_pin_outlined;
     }
   }
 
@@ -388,7 +386,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      '📝 ${activeAssignment.title}',
+                                      activeAssignment.title,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
@@ -625,7 +623,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                             final matricula = student['matricula'];
                             final calificacion = student['calificacion'] as double;
                             final statusColor = _getStatusColor(status);
-                            final statusIcon = _getStatusIcon(status);
+                            final statusIcon = _getStatusMaterialIcon(status);
                             final hasGrade = calificacion > 0;
                             final submissionDate = student['submission_date'];
                             final hasSubmission = student['has_submission'] ?? false;
@@ -647,14 +645,14 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                 } else if (activeAssignment == null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('📌 No hay entrega activa'),
+                                      content: Text('No hay entrega activa'),
                                       backgroundColor: Colors.orange,
                                     ),
                                   );
                                 } else {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('⏳ Este alumno aún no ha entregado su recetario'),
+                                      content: Text('Este alumno aún no ha entregado su recetario'),
                                       backgroundColor: Colors.orange,
                                     ),
                                   );
@@ -728,10 +726,11 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Text(
-                                              statusIcon,
-                                              style: const TextStyle(fontSize: 10),
-                                            ),
+                                             Icon(
+                                               statusIcon,
+                                               size: 11,
+                                               color: statusColor,
+                                             ),
                                             const SizedBox(width: 2),
                                             Flexible(
                                               child: Text(

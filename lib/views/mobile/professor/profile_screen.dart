@@ -96,7 +96,7 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('✅ Foto de perfil actualizada'),
+              content: Text('Foto de perfil actualizada'),
               backgroundColor: Colors.green,
             ),
           );
@@ -142,7 +142,7 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ Perfil actualizado correctamente'),
+          content: Text('Perfil actualizado correctamente'),
           backgroundColor: Colors.green,
         ),
       );
@@ -219,7 +219,7 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ Contraseña actualizada correctamente'),
+          content: Text('Contraseña actualizada correctamente'),
           backgroundColor: Colors.green,
         ),
       );
@@ -242,7 +242,7 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ $errorMessage'), backgroundColor: Colors.red),
+        SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
       );
     }
   }
@@ -278,11 +278,11 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
 
   String _getRoleDisplay(String? role) {
     if (role == 'profesor') {
-      return '👨‍🏫 Profesor';
+      return 'Profesor';
     } else if (role == 'alumno') {
-      return '👨‍🎓 Estudiante';
+      return 'Estudiante';
     } else {
-      return '👤 Usuario';
+      return 'Usuario';
     }
   }
 

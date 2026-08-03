@@ -92,23 +92,23 @@ class AuthProvider extends ChangeNotifier {
           return false;
         }
       } else {
-        _error = '❌ Credenciales incorrectas. Verifica tu correo y contraseña.';
+        _error = 'Credenciales incorrectas. Verifica tu correo y contraseña.';
         _isLoading = false;
         notifyListeners();
         return false;
       }
     } catch (e) {
-      print('❌ Error en login: $e');
+      print('Error en login: $e');
       
       final errorStr = e.toString().toLowerCase();
       if (errorStr.contains('invalid credentials') || 
           errorStr.contains('invalid login') ||
           errorStr.contains('user not found')) {
-        _error = '❌ Correo o contraseña incorrectos';
+        _error = 'Correo o contraseña incorrectos';
       } else if (errorStr.contains('email not confirmed')) {
-        _error = '❌ Correo no verificado. Revisa tu bandeja de entrada.';
+        _error = 'Correo no verificado. Revisa tu bandeja de entrada.';
       } else {
-        _error = '❌ Error al iniciar sesión. Intenta de nuevo.';
+        _error = 'Error al iniciar sesión. Intenta de nuevo.';
       }
       
       _isLoading = false;
@@ -123,25 +123,25 @@ class AuthProvider extends ChangeNotifier {
     required String fullName,
     required String role,
   }) async {
-    print('📝 signUp - Iniciando registro...');
+    print('signUp - Iniciando registro...');
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      print('📝 Intentando registrar: $email');
-      print('📝 Nombre: $fullName');
-      print('📝 Rol: $role');
+      print('Intentando registrar: $email');
+      print('Nombre: $fullName');
+      print('Rol: $role');
       
       final response = await _supabase.signUp(email, password, fullName, role);
-      print('📝 Respuesta recibida');
+      print('Respuesta recibida');
 
       if (response.user != null) {
-        print('✅ Usuario creado: ${response.user!.id}');
+        print('Usuario creado: ${response.user!.id}');
         await loadUserProfile(response.user!.id);
         
         if (_currentUser != null) {
-          print('✅ Registro exitoso: ${_currentUser!.fullName}');
+          print('Registro exitoso: ${_currentUser!.fullName}');
           _isLoading = false;
           notifyListeners();
           return true;
@@ -152,21 +152,21 @@ class AuthProvider extends ChangeNotifier {
           return false;
         }
       } else {
-        _error = '❌ Error al registrar usuario. Intenta de nuevo.';
+        _error = 'Error al registrar usuario. Intenta de nuevo.';
         _isLoading = false;
         notifyListeners();
         return false;
       }
     } catch (e) {
-      print('❌ Error en registro: $e');
+      print('Error en registro: $e');
       
       final errorStr = e.toString().toLowerCase();
       if (errorStr.contains('user already registered')) {
-        _error = '❌ Este correo ya está registrado';
+        _error = 'Este correo ya está registrado';
       } else if (errorStr.contains('password')) {
-        _error = '❌ La contraseña debe tener al menos 6 caracteres';
+        _error = 'La contraseña debe tener al menos 6 caracteres';
       } else {
-        _error = '❌ Error al registrar. Intenta de nuevo.';
+        _error = 'Error al registrar. Intenta de nuevo.';
       }
       
       _isLoading = false;
