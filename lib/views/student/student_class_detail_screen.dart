@@ -121,7 +121,7 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          'Profesor: ${_classData!['professor_id']}',
+                          'Profesor: ${(_classData!['profiles'] is Map ? _classData!['profiles']['full_name'] : null) ?? 'Sin nombre'}',
                           style: TextStyle(
                             color: Colors.grey.shade600,
                             fontSize: 14,

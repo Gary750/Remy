@@ -122,6 +122,7 @@ class AuthProvider extends ChangeNotifier {
     required String password,
     required String fullName,
     required String role,
+    String? matricula,
   }) async {
     print('signUp - Iniciando registro...');
     _isLoading = true;
@@ -133,7 +134,7 @@ class AuthProvider extends ChangeNotifier {
       print('Nombre: $fullName');
       print('Rol: $role');
       
-      final response = await _supabase.signUp(email, password, fullName, role);
+      final response = await _supabase.signUp(email, password, fullName, role, matricula: matricula);
       print('Respuesta recibida');
 
       if (response.user != null) {
