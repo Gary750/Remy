@@ -19,8 +19,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _nameController = TextEditingController();
-  
-  String? _selectedRole = 'alumno';
+  final _matriculaController = TextEditingController();
+
+  String? _selectedRole;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String? _errorMessage;
@@ -31,12 +32,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _nameController.dispose();
+    _matriculaController.dispose();
     super.dispose();
   }
 
   Future<void> _register() async {
     // Validar formulario
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // Validar rol seleccionado
+    if (_selectedRole == null) {
+      setState(() {
+        _errorMessage = 'Selecciona tu rol';
+      });
       return;
     }
 
@@ -54,12 +64,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
+
       final success = await authProvider.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         fullName: _nameController.text.trim(),
         role: _selectedRole!,
+        matricula: _selectedRole == 'alumno'
+            ? _matriculaController.text.trim()
+            : null,
       );
 
       if (success && mounted) {
@@ -88,9 +101,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
 
     if (authProvider.isLoading) {
-      return const Scaffold(
-        body: LoadingWidget(message: 'Registrando...'),
-      );
+      return const Scaffold(body: LoadingWidget(message: 'Registrando...'));
     }
 
     return Scaffold(
@@ -107,7 +118,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             children: [
               const SizedBox(height: 16),
-              
+
               // Nombre
               CustomTextField(
                 controller: _nameController,
@@ -200,6 +211,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               DropdownButtonFormField<String>(
                 decoration: InputDecoration(
                   labelText: 'Rol',
+                  hintText: 'Selecciona tu rol',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -209,24 +221,58 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   filled: true,
                   fillColor: Colors.grey.shade50,
+                  prefixIcon: const Icon(Icons.badge_outlined),
                 ),
                 value: _selectedRole,
+                hint: const Text('Selecciona tu rol'),
+                validator: (value) {
+                  if (value == null) return 'Selecciona tu rol';
+                  return null;
+                },
                 items: const [
-                  DropdownMenuItem(
-                    value: 'alumno',
-                    child: Text('Estudiante'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'profesor',
-                    child: Text('Profesor'),
-                  ),
+                  DropdownMenuItem(value: 'alumno', child: Text('Estudiante')),
+                  DropdownMenuItem(value: 'profesor', child: Text('Profesor')),
                 ],
                 onChanged: (value) {
                   setState(() {
                     _selectedRole = value;
+                    // Limpiar matrícula si cambia a profesor
+                    if (value != 'alumno') {
+                      _matriculaController.clear();
+                    }
                   });
                 },
               ),
+
+              // Campo dinámico: matrícula (solo para estudiantes)
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                child: _selectedRole == 'alumno'
+                    ? Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          CustomTextField(
+                            controller: _matriculaController,
+                            label: 'Matrícula',
+                            hint: 'Ej: 2430123',
+                            prefixIcon: Icons.school_outlined,
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Ingresa tu matrícula';
+                              }
+                              if (!RegExp(r'^\d{7}$').hasMatch(value)) {
+                                return 'La matrícula debe tener exactamente 7 dígitos';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      )
+                    : const SizedBox.shrink(),
+              ),
+
               const SizedBox(height: 24),
 
               // Error
@@ -274,10 +320,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 children: [
                   Text(
                     '¿Ya tienes cuenta?',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                   ),
                   TextButton(
                     onPressed: () {

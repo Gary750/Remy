@@ -331,7 +331,7 @@ class StudentController {
     try {
       final response = await _supabase.supabase
           .from('classes')
-          .select()
+          .select('*, profiles!professor_id(full_name)')
           .eq('id', classId)
           .maybeSingle();
 

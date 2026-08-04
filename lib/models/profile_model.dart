@@ -4,6 +4,7 @@ class ProfileModel {
   final String fullName;
   final String email;
   final String? avatarUrl;
+  final String? matricula;
   final DateTime createdAt;
 
   ProfileModel({
@@ -12,6 +13,7 @@ class ProfileModel {
     required this.fullName,
     required this.email,
     this.avatarUrl,
+    this.matricula,
     required this.createdAt,
   });
 
@@ -22,6 +24,7 @@ class ProfileModel {
       fullName: json['full_name'] ?? '',
       email: json['email'] ?? '',
       avatarUrl: json['avatar_url'],
+      matricula: json['matricula'],
       createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
     );
   }
@@ -33,6 +36,7 @@ class ProfileModel {
       'full_name': fullName,
       'email': email,
       'avatar_url': avatarUrl,
+      'matricula': matricula,
       'created_at': createdAt.toIso8601String(),
     };
   }
