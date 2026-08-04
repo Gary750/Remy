@@ -48,7 +48,7 @@ class SupabaseService {
   // choca con la llave primaria (profiles.id ya existe) y el registro
   // falla. Se cambia a .upsert() para que funcione exista o no la fila
   // creada por el trigger, y de paso confirmamos full_name/role/email.
-  Future<AuthResponse> signUp(String email, String password, String fullName, String role) async {
+  Future<AuthResponse> signUp(String email, String password, String fullName, String role, {String? matricula}) async {
     final response = await client.auth.signUp(
       email: email,
       password: password,
@@ -63,12 +63,14 @@ class SupabaseService {
       await Future.delayed(const Duration(milliseconds: 500));
       
       print('📝 signUp - Haciendo upsert con rol: $role');
-      await client.from('profiles').upsert({
+      final upsertData = {
         'id': response.user!.id,
         'full_name': fullName,
         'email': email,
         'role': role,
-      });
+        if (matricula != null && matricula.isNotEmpty) 'matricula': matricula,
+      };
+      await client.from('profiles').upsert(upsertData);
       print('📝 signUp - Upsert completado con rol: $role');
     }
 

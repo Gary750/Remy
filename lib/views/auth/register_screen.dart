@@ -19,8 +19,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _nameController = TextEditingController();
-  
-  String? _selectedRole = 'alumno';
+  final _matriculaController = TextEditingController();
+
+  String? _selectedRole;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String? _errorMessage;
@@ -31,12 +32,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _nameController.dispose();
+    _matriculaController.dispose();
     super.dispose();
   }
 
   Future<void> _register() async {
     // Validar formulario
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // Validar rol seleccionado
+    if (_selectedRole == null) {
+      setState(() {
+        _errorMessage = 'Selecciona tu rol';
+      });
       return;
     }
 
@@ -60,6 +70,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordController.text,
         fullName: _nameController.text.trim(),
         role: _selectedRole!,
+        matricula: _selectedRole == 'alumno'
+            ? _matriculaController.text.trim()
+            : null,
       );
 
       if (success && mounted) {
@@ -200,6 +213,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               DropdownButtonFormField<String>(
                 decoration: InputDecoration(
                   labelText: 'Rol',
+                  hintText: 'Selecciona tu rol',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -209,8 +223,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   filled: true,
                   fillColor: Colors.grey.shade50,
+                  prefixIcon: const Icon(Icons.badge_outlined),
                 ),
                 value: _selectedRole,
+                hint: const Text('Selecciona tu rol'),
+                validator: (value) {
+                  if (value == null) return 'Selecciona tu rol';
+                  return null;
+                },
                 items: const [
                   DropdownMenuItem(
                     value: 'alumno',
@@ -224,9 +244,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 onChanged: (value) {
                   setState(() {
                     _selectedRole = value;
+                    // Limpiar matrícula si cambia a profesor
+                    if (value != 'alumno') {
+                      _matriculaController.clear();
+                    }
                   });
                 },
               ),
+
+              // Campo dinámico: matrícula (solo para estudiantes)
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                child: _selectedRole == 'alumno'
+                    ? Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          CustomTextField(
+                            controller: _matriculaController,
+                            label: 'Matrícula',
+                            hint: 'Ej: 2330146',
+                            prefixIcon: Icons.school_outlined,
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Ingresa tu matrícula';
+                              }
+                              if (!RegExp(r'^\d{7}$').hasMatch(value)) {
+                                return 'La matrícula debe tener exactamente 7 dígitos';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      )
+                    : const SizedBox.shrink(),
+              ),
+
               const SizedBox(height: 24),
 
               // Error

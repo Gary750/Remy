@@ -178,8 +178,16 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
   }
 
   Future<String> _getStudentMatricula(String studentId) async {
-    final hash = studentId.hashCode.abs() % 10000;
-    return 'GAM-2021-${hash.toString().padLeft(4, '0')}';
+    try {
+      final response = await _supabase.supabase
+          .from('profiles')
+          .select('matricula')
+          .eq('id', studentId)
+          .maybeSingle();
+      return response?['matricula']?.toString() ?? 'Sin matrícula';
+    } catch (e) {
+      return 'Sin matrícula';
+    }
   }
 
   String _formatDate(String? dateStr) {
