@@ -64,7 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
+
       final success = await authProvider.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
@@ -101,9 +101,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
 
     if (authProvider.isLoading) {
-      return const Scaffold(
-        body: LoadingWidget(message: 'Registrando...'),
-      );
+      return const Scaffold(body: LoadingWidget(message: 'Registrando...'));
     }
 
     return Scaffold(
@@ -120,7 +118,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             children: [
               const SizedBox(height: 16),
-              
+
               // Nombre
               CustomTextField(
                 controller: _nameController,
@@ -232,14 +230,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   return null;
                 },
                 items: const [
-                  DropdownMenuItem(
-                    value: 'alumno',
-                    child: Text('Estudiante'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'profesor',
-                    child: Text('Profesor'),
-                  ),
+                  DropdownMenuItem(value: 'alumno', child: Text('Estudiante')),
+                  DropdownMenuItem(value: 'profesor', child: Text('Profesor')),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -263,7 +255,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           CustomTextField(
                             controller: _matriculaController,
                             label: 'Matrícula',
-                            hint: 'Ej: 2330146',
+                            hint: 'Ej: 2430123',
                             prefixIcon: Icons.school_outlined,
                             keyboardType: TextInputType.number,
                             validator: (value) {
@@ -328,10 +320,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 children: [
                   Text(
                     '¿Ya tienes cuenta?',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                   ),
                   TextButton(
                     onPressed: () {
