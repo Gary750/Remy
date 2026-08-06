@@ -214,9 +214,9 @@ class SupabaseService {
       'class_id': classId,
       'title': title,
       'type': recipeType, // única columna real en la tabla
-      'due_date': dueDate.toIso8601String(),
+      'due_date': dueDate.toUtc().toIso8601String(),
       'instructions': instructions ?? '',
-      'created_at': DateTime.now().toIso8601String(),
+      'created_at': DateTime.now().toUtc().toIso8601String(),
     };
 
     final response = await client

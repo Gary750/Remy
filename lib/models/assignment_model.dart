@@ -31,9 +31,9 @@ class AssignmentModel {
       title: json['title'] ?? '',
       type: 'recetario',
       recipeType: json['type'] ?? 'Ambos',
-      dueDate: DateTime.parse(json['due_date'] ?? DateTime.now().toIso8601String()),
+      dueDate: DateTime.parse(json['due_date'] ?? DateTime.now().toIso8601String()).toLocal(),
       instructions: json['instructions'] ?? '',
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()).toLocal(),
     );
   }
 
@@ -43,9 +43,9 @@ class AssignmentModel {
       'class_id': classId,
       'title': title,
       'type': recipeType, // única columna real
-      'due_date': dueDate.toIso8601String(),
+      'due_date': dueDate.toUtc().toIso8601String(),
       'instructions': instructions,
-      'created_at': createdAt.toIso8601String(),
+      'created_at': createdAt.toUtc().toIso8601String(),
     };
   }
 

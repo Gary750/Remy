@@ -85,6 +85,18 @@ class _StudentSubmissionsScreenState
           }
         }
 
+        // Permiso de entrega tardía
+        bool lateAllowed = false;
+        if (!hasSubmission && !assignment.isActive) {
+          final lateRaw = await _supabase.supabase
+              .from('late_submissions')
+              .select('id')
+              .eq('student_id', widget.studentId)
+              .eq('assignment_id', assignment.id)
+              .maybeSingle();
+          lateAllowed = lateRaw != null;
+        }
+
         String status;
         if (hasSubmission) {
           status = 'Entregado';
@@ -101,6 +113,7 @@ class _StudentSubmissionsScreenState
           'recipe_name': hasSubmission ? (submissionRaw['name'] ?? '') : '',
           'grade': grade,
           'status': status,
+          'late_allowed': lateAllowed,
         });
       }
 
@@ -118,10 +131,63 @@ class _StudentSubmissionsScreenState
     }
   }
 
+  Future<void> _allowLateSubmission(String assignmentId, String title) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Permitir entrega / Prórroga'),
+        content: Text(
+          '¿Deseas permitir que ${widget.studentName} pueda subir la receta de "$title" aunque el plazo ya venció?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE65100),
+            ),
+            child: const Text('Sí, permitir', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await _supabase.supabase.from('late_submissions').upsert({
+        'student_id': widget.studentId,
+        'assignment_id': assignmentId,
+        'allowed_at': DateTime.now().toUtc().toIso8601String(),
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Se otorgó prórroga a ${widget.studentName}.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al otorgar prórroga: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   String _formatDate(String? dateStr) {
     if (dateStr == null) return '—';
     try {
-      final date = DateTime.parse(dateStr);
+      final date = DateTime.parse(dateStr).toLocal();
       final day = date.day.toString().padLeft(2, '0');
       final month = date.month.toString().padLeft(2, '0');
       final year = date.year;
@@ -326,6 +392,7 @@ class _StudentSubmissionsScreenState
     final hasGrade = grade > 0;
     final submissionDate = row['submission_date'] as String?;
     final recipeName = row['recipe_name'] as String;
+    final lateAllowed = row['late_allowed'] == true;
 
     final color = _statusColor(status);
     final icon = _statusIcon(status);
@@ -597,20 +664,43 @@ class _StudentSubmissionsScreenState
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
+                    color: lateAllowed ? Colors.green.shade50 : Colors.red.shade50,
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: lateAllowed ? Colors.green.shade200 : Colors.red.shade200,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.info_outline,
-                          size: 13, color: Colors.red.shade400),
+                      Icon(
+                        lateAllowed ? Icons.check_circle_outline : Icons.info_outline,
+                        size: 14,
+                        color: lateAllowed ? Colors.green.shade600 : Colors.red.shade400,
+                      ),
                       const SizedBox(width: 6),
                       Text(
-                        'No entregó antes del cierre',
+                        lateAllowed ? 'Prórroga otorgada (entrega tardía permitida)' : 'No entregó antes del cierre',
                         style: TextStyle(
-                            fontSize: 11, color: Colors.red.shade600),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: lateAllowed ? Colors.green.shade700 : Colors.red.shade600,
+                        ),
                       ),
+                      if (!lateAllowed) ...[
+                        const SizedBox(width: 12),
+                        ElevatedButton.icon(
+                          onPressed: () => _allowLateSubmission(assignment.id, assignment.title),
+                          icon: const Icon(Icons.lock_open, size: 13, color: Colors.white),
+                          label: const Text('Otorgar prórroga', style: TextStyle(fontSize: 11, color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE65100),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            minimumSize: const Size(0, 26),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

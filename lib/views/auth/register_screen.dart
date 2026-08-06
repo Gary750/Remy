@@ -137,8 +137,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               // Email
               CustomTextField(
                 controller: _emailController,
-                label: 'Correo institucional',
-                hint: 'ejemplo@utvm.edu.mx',
+                label: 'Correo electrónico',
+                hint: 'ejemplo@correo.com',
                 prefixIcon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
