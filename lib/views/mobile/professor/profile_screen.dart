@@ -465,7 +465,7 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
                   const SizedBox(height: 16),
 
                   CustomTextField(
-                    label: 'Correo institucional',
+                    label: 'Correo electrónico',
                     hint: user?.email ?? '',
                     prefixIcon: Icons.email_outlined,
                     readOnly: true,

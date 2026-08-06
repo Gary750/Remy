@@ -195,8 +195,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Email
                       CustomTextField(
                         controller: _emailController,
-                        label: 'Correo institucional',
-                        hint: 'ejemplo@utvm.edu.mx',
+                        label: 'Correo electrónico',
+                        hint: 'ejemplo@correo.com',
                         prefixIcon: Icons.email_outlined,
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,

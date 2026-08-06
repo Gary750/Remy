@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:remy/config/app_routes.dart';
 import 'package:remy/controllers/student_controller.dart';
 import 'package:remy/models/assignment_model.dart';
+import 'package:remy/services/supabase_service.dart';
 import 'package:remy/views/shared/widgets/loading_widget.dart';
 
 class StudentClassDetailScreen extends StatefulWidget {
@@ -16,9 +17,26 @@ class StudentClassDetailScreen extends StatefulWidget {
 
 class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
   final StudentController _studentController = StudentController();
+  final SupabaseService _supabase = SupabaseService();
   bool _isLoading = true;
   Map<String, dynamic>? _classData;
   List<Map<String, dynamic>> _assignments = [];
+
+  Future<bool> _isLateAllowed(String assignmentId) async {
+    try {
+      final user = _supabase.client.auth.currentUser;
+      if (user == null) return false;
+      final response = await _supabase.client
+          .from('late_submissions')
+          .select('id')
+          .eq('student_id', user.id)
+          .eq('assignment_id', assignmentId)
+          .maybeSingle();
+      return response != null;
+    } catch (e) {
+      return false;
+    }
+  }
 
   @override
   void initState() {
@@ -246,17 +264,25 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                   decoration: BoxDecoration(
                     color: isActive
                         ? Colors.green.shade100
-                        : Colors.grey.shade200,
+                        : hasSubmission
+                            ? Colors.teal.shade50
+                            : Colors.red.shade100,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    isActive ? 'Activa' : 'Cerrada',
+                    isActive
+                        ? 'Activa'
+                        : hasSubmission
+                            ? 'Entregado'
+                            : 'Vencida',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: isActive
                           ? Colors.green.shade700
-                          : Colors.grey.shade600,
+                          : hasSubmission
+                              ? Colors.teal.shade700
+                              : Colors.red.shade700,
                     ),
                   ),
                 ),
@@ -357,8 +383,123 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.studentMyRecipes,
+                          arguments: {
+                            'assignmentId': assignment['id'],
+                            'classId': widget.classId,
+                          },
+                        );
+                      },
+                      icon: const Icon(Icons.visibility, size: 16),
+                      label: const Text('Ver receta'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.green.shade700,
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
                   ],
                 ),
+              )
+            else
+              FutureBuilder<bool>(
+                future: _isLateAllowed(assignment['id'].toString()),
+                builder: (context, snapshot) {
+                  final isAllowed = snapshot.data ?? false;
+                  if (isAllowed) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 8, top: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.orange.shade300),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.lock_open, color: Colors.orange.shade800, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Tu profesor ha permitido que entregues fuera de plazo.',
+                                  style: TextStyle(
+                                    color: Colors.orange.shade900,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context,
+                              AppRoutes.studentUploadRecipe,
+                              arguments: {
+                                'assignmentId': assignment['id'],
+                                'classId': widget.classId,
+                                'recipeType': assignmentModel.recipeType,
+                              },
+                            );
+                          },
+                          icon: const Icon(Icons.upload_file, color: Colors.white),
+                          label: const Text('Subir recetario (tardío)', style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE65100),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.cancel_outlined, color: Colors.red.shade600, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'No entregado',
+                                style: TextStyle(
+                                  color: Colors.red.shade700,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                'El plazo venció sin entrega. Contacta a tu profesor si requieres prórroga.',
+                                style: TextStyle(
+                                  color: Colors.red.shade500,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
           ],
         ),
@@ -368,7 +509,7 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
 
   String _formatDate(String dateStr) {
     try {
-      final date = DateTime.parse(dateStr);
+      final date = DateTime.parse(dateStr).toLocal();
       return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
     } catch (e) {
       return dateStr;
