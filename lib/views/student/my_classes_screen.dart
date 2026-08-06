@@ -183,6 +183,7 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> {
 
         return ClassCard(
           classModel: classModel,
+          showStudentCount: false,
           onTap: () {
             Navigator.pushNamed(
               context,

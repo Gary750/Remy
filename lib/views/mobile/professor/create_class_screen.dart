@@ -24,26 +24,22 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     '3er Cuatrimestre',
     '4to Cuatrimestre',
     '5to Cuatrimestre',
-    '6to Cuatrimestre',
     '7mo Cuatrimestre',
     '8vo Cuatrimestre',
     '9no Cuatrimestre',
-    '10mo Cuatrimestre',
   ];
 
-  final List<String> _groups = ['A', 'B', 'C', 'D', 'E'];
+  final List<String> _groups = ['M', 'N', 'O'];
 
   final Map<String, List<String>> _subjectsByTerm = {
-    '7mo Cuatrimestre': ['Cocina Mexicana I', 'Cocina Asiática'],
-    '8vo Cuatrimestre': ['Cocina Mexicana II', 'Cocina Europea'],
-    '9no Cuatrimestre': ['Cocina de Fusión', 'Cocina Mediterránea'],
-    '10mo Cuatrimestre': ['Cocina Internacional', 'Repostería Avanzada'],
-    '6to Cuatrimestre': ['Cocina Internacional', 'Repostería'],
-    '5to Cuatrimestre': ['Cocina Internacional', 'Repostería'],
-    '4to Cuatrimestre': ['Cocina Mediterránea', 'Panadería'],
-    '3er Cuatrimestre': ['Técnicas Culinarias', 'Seguridad e Higiene'],
-    '2do Cuatrimestre': ['Cocina Básica', 'Manejo de Alimentos'],
-    '1er Cuatrimestre': ['Introducción a la Cocina', 'Higiene y Seguridad'],
+    '1er Cuatrimestre': ['Bases Culinarias'],
+    '2do Cuatrimestre': ['Bases Culinarias II', 'Panadería'],
+    '3er Cuatrimestre': ['Operaciones de Bar', 'Pastelería', 'Bases Culinarias'],
+    '4to Cuatrimestre': ['Repostería'],
+    '5to Cuatrimestre': ['Conformación de Menús'],
+    '7mo Cuatrimestre': ['Cocina Asiática', 'Cocina Mexicana I'],
+    '8vo Cuatrimestre': ['Cocina Europea', 'Cocina Mexicana II'],
+    '9no Cuatrimestre': ['Mixología', 'Cocina Contemporánea', 'Optativo'],
   };
 
   List<String> get _availableSubjects {

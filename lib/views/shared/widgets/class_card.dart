@@ -4,11 +4,13 @@ import 'package:remy/models/class_model.dart';
 class ClassCard extends StatelessWidget {
   final ClassModel classModel;
   final VoidCallback onTap;
+  final bool showStudentCount;
 
   const ClassCard({
     super.key,
     required this.classModel,
     required this.onTap,
+    this.showStudentCount = true,
   });
 
   @override
@@ -81,26 +83,27 @@ class ClassCard extends StatelessWidget {
               const SizedBox(height: 8),
 
               // ========== ALUMNOS ==========
-              Row(
-                children: [
-                  Icon(
-                    studentCount > 0 ? Icons.people_alt : Icons.people_outline,
-                    size: 16,
-                    color: studentCount > 0 ? Colors.grey.shade600 : Colors.grey.shade400,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    studentCount > 0
-                        ? '$studentCount ${studentCount == 1 ? 'alumno' : 'alumnos'}'
-                        : 'Sin alumnos inscritos',
-                    style: TextStyle(
-                      fontSize: 13,
+              if (showStudentCount)
+                Row(
+                  children: [
+                    Icon(
+                      studentCount > 0 ? Icons.people_alt : Icons.people_outline,
+                      size: 16,
                       color: studentCount > 0 ? Colors.grey.shade600 : Colors.grey.shade400,
-                      fontStyle: studentCount == 0 ? FontStyle.italic : FontStyle.normal,
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 6),
+                    Text(
+                      studentCount > 0
+                          ? '$studentCount ${studentCount == 1 ? 'alumno' : 'alumnos'}'
+                          : 'Sin alumnos inscritos',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: studentCount > 0 ? Colors.grey.shade600 : Colors.grey.shade400,
+                        fontStyle: studentCount == 0 ? FontStyle.italic : FontStyle.normal,
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),
