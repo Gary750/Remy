@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:remy/providers/auth_provider.dart';
 import 'package:remy/services/supabase_service.dart';
 import 'package:remy/services/storage_service.dart';
+import 'package:remy/utils/ui_feedback.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'package:remy/views/shared/widgets/custom_text_field.dart';
 import 'package:remy/views/shared/widgets/loading_widget.dart';
@@ -75,42 +76,35 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
         final bytes = await image.readAsBytes();
         final fileName = image.name;
 
+        if (!mounted) return;
+        final authProvider = context.read<AuthProvider>();
+        final userId = authProvider.currentUser!.id;
+
         // Subir al bucket de avatars
         final url = await _storageService.uploadAvatar(bytes, fileName);
 
         // Actualizar avatar_url en la tabla profiles
-        final userId = context.read<AuthProvider>().currentUser!.id;
         await _supabase.supabase
             .from('profiles')
             .update({'avatar_url': url})
             .eq('id', userId);
 
+        if (!mounted) return;
         // Refrescar el perfil en el provider
-        await context.read<AuthProvider>().loadUserProfile(userId);
-
-        setState(() {
-          _avatarUrl = url;
-          _isLoading = false;
-        });
+        await authProvider.loadUserProfile(userId);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Foto de perfil actualizada'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          setState(() {
+            _avatarUrl = url;
+            _isLoading = false;
+          });
+          UIFeedback.showSuccess(context, 'Foto de perfil actualizada correctamente.');
         }
       }
     } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al subir foto: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() => _isLoading = false);
+        UIFeedback.showError(context, e, title: 'Error al subir foto de perfil');
       }
     }
   }
@@ -134,59 +128,35 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
 
       await authProvider.loadUserProfile(userId);
 
+      if (!mounted) return;
       setState(() {
         _isEditing = false;
         _successMessage = 'Perfil actualizado correctamente';
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Perfil actualizado correctamente'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      UIFeedback.showSuccess(context, 'Perfil actualizado correctamente.');
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al actualizar perfil: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        setState(() => _isLoading = false);
+        UIFeedback.showError(context, e, title: 'Error al actualizar perfil');
+      }
     }
   }
 
   Future<void> _changePassword() async {
     if (_newPasswordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Las contraseñas no coinciden'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      UIFeedback.showWarning(context, 'Las contraseñas no coinciden.');
       return;
     }
 
     if (_newPasswordController.text.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('La contraseña debe tener al menos 6 caracteres'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      UIFeedback.showWarning(context, 'La contraseña debe tener al menos 6 caracteres.');
       return;
     }
 
     if (_newPasswordController.text == _currentPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('La nueva contraseña debe ser diferente a la actual'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      UIFeedback.showWarning(context, 'La nueva contraseña debe ser diferente a la actual.');
       return;
     }
 
@@ -200,50 +170,29 @@ class _ProfessorProfileScreenState extends State<ProfessorProfileScreen> {
       final currentUser = supabase.auth.currentUser;
 
       if (currentUser == null) {
-        throw Exception('No hay usuario autenticado');
+        throw 'No hay usuario autenticado';
       }
 
       await supabase.auth.updateUser(
         UserAttributes(password: _newPasswordController.text),
       );
 
+      if (!mounted) return;
       setState(() {
-        _isChangingPassword = false; // ✅ Solo cierra el formulario de cambio
+        _isChangingPassword = false;
         _currentPasswordController.clear();
         _newPasswordController.clear();
         _confirmPasswordController.clear();
         _isLoading = false;
         _successMessage = 'Contraseña actualizada correctamente';
-        // ✅ _isEditing SIGUE EN TRUE
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Contraseña actualizada correctamente'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      UIFeedback.showSuccess(context, 'Contraseña actualizada correctamente.');
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-
-      String errorMessage = 'Error al cambiar contraseña';
-
-      final errorStr = e.toString().toLowerCase();
-      if (errorStr.contains('same as old password') ||
-          errorStr.contains('new password cannot be the same')) {
-        errorMessage = 'La nueva contraseña debe ser diferente a la actual';
-      } else if (errorStr.contains('password') && errorStr.contains('weak')) {
-        errorMessage = 'La contraseña es muy débil. Usa más caracteres.';
-      } else if (errorStr.contains('422')) {
-        errorMessage =
-            'Error de validación. Asegúrate que la nueva contraseña sea diferente a la actual.';
+      if (mounted) {
+        setState(() => _isLoading = false);
+        UIFeedback.showError(context, e, title: 'Error al cambiar contraseña');
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
-      );
     }
   }
 

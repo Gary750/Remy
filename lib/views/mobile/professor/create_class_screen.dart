@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:remy/providers/auth_provider.dart';
 import 'package:remy/providers/class_provider.dart';
+import 'package:remy/utils/ui_feedback.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'package:remy/views/shared/widgets/loading_widget.dart';
 
@@ -259,8 +260,14 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
           groupName: _selectedGroup!,
         );
 
-    if (success && mounted) {
+    if (!mounted) return;
+
+    if (success) {
+      UIFeedback.showSuccess(context, 'Clase creada exitosamente.');
       Navigator.pop(context, true);
+    } else {
+      final error = Provider.of<ClassProvider>(context, listen: false).error;
+      UIFeedback.showError(context, error ?? 'No se pudo crear la clase.');
     }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:remy/models/profile_model.dart';
 import 'package:remy/services/supabase_service.dart';
+import 'package:remy/utils/error_handler.dart';
 
 class AuthProvider extends ChangeNotifier {
   ProfileModel? _currentUser;
@@ -32,7 +33,7 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       print('❌ Error loading current user: $e');
       _currentUser = null;
-      _error = 'Error al cargar el usuario';
+      _error = ErrorHandler.translate(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -55,7 +56,7 @@ class AuthProvider extends ChangeNotifier {
         print('❌ $_error');
       }
     } catch (e) {
-      _error = 'Error al cargar el perfil';
+      _error = ErrorHandler.translate(e);
       _currentUser = null;
       print('❌ Error loading profile: $e');
     }
@@ -99,18 +100,7 @@ class AuthProvider extends ChangeNotifier {
       }
     } catch (e) {
       print('Error en login: $e');
-      
-      final errorStr = e.toString().toLowerCase();
-      if (errorStr.contains('invalid credentials') || 
-          errorStr.contains('invalid login') ||
-          errorStr.contains('user not found')) {
-        _error = 'Correo o contraseña incorrectos';
-      } else if (errorStr.contains('email not confirmed')) {
-        _error = 'Correo no verificado. Revisa tu bandeja de entrada.';
-      } else {
-        _error = 'Error al iniciar sesión. Intenta de nuevo.';
-      }
-      
+      _error = ErrorHandler.translate(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -160,16 +150,7 @@ class AuthProvider extends ChangeNotifier {
       }
     } catch (e) {
       print('Error en registro: $e');
-      
-      final errorStr = e.toString().toLowerCase();
-      if (errorStr.contains('user already registered')) {
-        _error = 'Este correo ya está registrado';
-      } else if (errorStr.contains('password')) {
-        _error = 'La contraseña debe tener al menos 6 caracteres';
-      } else {
-        _error = 'Error al registrar. Intenta de nuevo.';
-      }
-      
+      _error = ErrorHandler.translate(e);
       _isLoading = false;
       notifyListeners();
       return false;

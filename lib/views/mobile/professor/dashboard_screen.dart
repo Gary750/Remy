@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:remy/providers/auth_provider.dart';
 import 'package:remy/providers/class_provider.dart';
+import 'package:remy/utils/ui_feedback.dart';
 import 'package:remy/views/mobile/professor/class_detail_screen.dart';
 import 'package:remy/views/mobile/professor/create_class_screen.dart';
 import 'package:remy/views/mobile/professor/profile_screen.dart';
@@ -70,6 +71,21 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
     if (authProvider.isLoading || classProvider.isLoading) {
       return const Scaffold(
         body: LoadingWidget(message: 'Cargando tus clases...'),
+      );
+    }
+
+    if (classProvider.error != null && classProvider.classes.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Mis Clases'),
+          backgroundColor: const Color(0xFFE65100),
+          foregroundColor: Colors.white,
+        ),
+        body: UIErrorStateWidget(
+          error: classProvider.error,
+          title: 'Error al cargar tus clases',
+          onRetry: _loadData,
+        ),
       );
     }
 
@@ -288,7 +304,7 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
               },
             ),
           );
-        }).toList(),
+        }),
 
         // Separador entre cuatrimestres
         const SizedBox(height: 8),

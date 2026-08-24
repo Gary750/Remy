@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:remy/controllers/recipe_controller.dart';
+import 'package:remy/utils/ui_feedback.dart';
 import 'package:remy/views/shared/responsive_layout.dart';
 
 class MyRecipesScreen extends StatefulWidget {
@@ -20,8 +21,9 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
   final RecipeController recipeController = RecipeController();
 
   bool isLoading = true;
-  String? selectedRecipeId;
+  String? _error;
   List<Map<String, dynamic>> recipes = [];
+  String? selectedRecipeId;
 
   @override
   void initState() {
@@ -30,9 +32,13 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
   }
 
   Future<void> _loadRecipes() async {
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      _error = null;
+    });
     try {
       final data = await recipeController.getMyRecipes();
+      if (!mounted) return;
       setState(() {
         if (widget.assignmentId != null) {
           // Filtrar solo las recetas de esta entrega
@@ -46,12 +52,11 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
         } else {
           recipes = data;
         }
+        _error = null;
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-      );
+      setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -59,6 +64,17 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return UIErrorStateWidget(
+        error: _error,
+        title: 'Error al cargar tus recetas',
+        onRetry: _loadRecipes,
+      );
+    }
     final bool showingDetail = selectedRecipeId != null;
 
     return PopScope(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:remy/services/supabase_service.dart';
+import 'package:remy/utils/error_handler.dart';
 
 class EnrollmentProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _students = [];
@@ -23,7 +24,7 @@ class EnrollmentProvider extends ChangeNotifier {
     try {
       _students = await _supabase.getStudentsByClass(classId);
     } catch (e) {
-      _error = 'Error al cargar alumnos';
+      _error = ErrorHandler.translate(e);
     } finally {
       _isLoading = false;
       notifyListeners();

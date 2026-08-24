@@ -3,6 +3,7 @@ import 'package:remy/config/app_routes.dart';
 import 'package:remy/controllers/student_controller.dart';
 import 'package:remy/models/assignment_model.dart';
 import 'package:remy/services/supabase_service.dart';
+import 'package:remy/utils/ui_feedback.dart';
 import 'package:remy/views/shared/widgets/loading_widget.dart';
 
 class StudentClassDetailScreen extends StatefulWidget {
@@ -19,6 +20,7 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
   final StudentController _studentController = StudentController();
   final SupabaseService _supabase = SupabaseService();
   bool _isLoading = true;
+  String? _error;
   Map<String, dynamic>? _classData;
   List<Map<String, dynamic>> _assignments = [];
 
@@ -45,7 +47,10 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
   }
 
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
 
     try {
       final classData = await _studentController.getClassDetail(widget.classId);
@@ -58,14 +63,15 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
           _classData = classData;
           _assignments = assignments;
           _isLoading = false;
+          _error = null;
         });
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        setState(() {
+          _isLoading = false;
+          _error = e.toString();
+        });
       }
     }
   }
@@ -74,7 +80,18 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        body: LoadingWidget(message: 'Cargando detalles...'),
+        body: LoadingWidget(message: 'Cargando detalles de la clase...'),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Detalle de Clase')),
+        body: UIErrorStateWidget(
+          error: _error,
+          title: 'Error al cargar la clase',
+          onRetry: _loadData,
+        ),
       );
     }
 

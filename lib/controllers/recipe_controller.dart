@@ -1,5 +1,6 @@
 // lib/controllers/recipe_controller.dart
 import '../config/supabase_client.dart';
+import '../utils/error_handler.dart';
 
 class RecipeController {
   /// Crea una nueva receta ligada al alumno autenticado.
@@ -18,7 +19,7 @@ class RecipeController {
 
       return response;
     } catch (e) {
-      throw 'Error al crear la receta: $e';
+      throw ErrorHandler.translate(e);
     }
   }
 
@@ -33,7 +34,7 @@ class RecipeController {
           .eq('id', recipeId)
           .eq('student_id', user.id);
     } catch (e) {
-      throw 'Error al actualizar la receta: $e';
+      throw ErrorHandler.translate(e);
     }
   }
 
@@ -76,7 +77,7 @@ class RecipeController {
               })
           .toList();
     } catch (e) {
-      throw 'Error al cargar tus recetas: $e';
+      throw ErrorHandler.translate(e);
     }
   }
 
@@ -106,7 +107,7 @@ class RecipeController {
         'stars': grade?['stars'],
       };
     } catch (e) {
-      throw 'Error al cargar la receta: $e';
+      throw ErrorHandler.translate(e);
     }
   }
 
@@ -138,7 +139,7 @@ class RecipeController {
         'author': profile?['full_name'] ?? 'Alumno',
       };
     } catch (e) {
-      throw 'Error al cargar el detalle de la receta: $e';
+      throw ErrorHandler.translate(e);
     }
   }
 
@@ -202,7 +203,7 @@ class RecipeController {
         };
       }).toList();
     } catch (e) {
-      throw 'Error al buscar recetas: $e';
+      throw ErrorHandler.translate(e);
     }
   }
 
@@ -219,7 +220,7 @@ class RecipeController {
       countries.sort();
       return countries;
     } catch (e) {
-      throw 'Error al cargar países: $e';
+      throw ErrorHandler.translate(e);
     }
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:remy/providers/auth_provider.dart';
+import 'package:remy/utils/error_handler.dart';
+import 'package:remy/utils/ui_feedback.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'package:remy/views/shared/widgets/custom_text_field.dart';
 import 'package:remy/views/shared/widgets/loading_widget.dart';
@@ -76,23 +78,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Registro exitoso'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        UIFeedback.showSuccess(context, '¡Registro exitoso! Bienvenido a Remy.');
         // Redirigir al AuthWrapper después del registro exitoso
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const AuthWrapper()),
           (route) => false,
         );
+      } else if (mounted) {
+        setState(() {
+          _errorMessage = authProvider.error ?? 'No se pudo completar el registro.';
+        });
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Error al registrar: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = ErrorHandler.translate(e);
+        });
+      }
     }
   }
 

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_client.dart';
 import '../services/storage_service.dart';
+import '../utils/error_handler.dart';
 
 class ProfileController {
   final StorageService storageService = StorageService();
@@ -22,7 +23,7 @@ class ProfileController {
         'email': user.email,
       };
     } catch (e) {
-      throw 'Error al cargar el perfil: $e';
+      throw ErrorHandler.translate(e);
     }
   }
 
@@ -37,7 +38,7 @@ class ProfileController {
           .update({'full_name': fullName})
           .eq('id', user.id);
     } catch (e) {
-      throw 'Error al actualizar el nombre: $e';
+      throw ErrorHandler.translate(e);
     }
   }
 
@@ -57,7 +58,7 @@ class ProfileController {
 
       return url;
     } catch (e) {
-      throw 'Error al actualizar la foto de perfil: $e';
+      throw ErrorHandler.translate(e);
     }
   }
 
@@ -85,7 +86,7 @@ class ProfileController {
         UserAttributes(password: newPassword),
       );
     } catch (e) {
-      throw e is String ? e : 'Error al cambiar la contraseña: $e';
+      throw ErrorHandler.translate(e);
     }
   }
 }
