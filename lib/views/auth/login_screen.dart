@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:remy/providers/auth_provider.dart';
+import 'package:remy/utils/error_handler.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'package:remy/views/shared/widgets/custom_text_field.dart';
 import 'package:remy/views/auth/auth_wrapper.dart';
@@ -77,12 +78,10 @@ class _LoginScreenState extends State<LoginScreen> {
           _isLoading = false;
         });
       }
-      
     } catch (e) {
-      // Error inesperado
       if (mounted) {
         setState(() {
-          _errorMessage = 'Error al iniciar sesión. Intenta de nuevo.';
+          _errorMessage = ErrorHandler.translate(e);
           _isLoading = false;
         });
       }

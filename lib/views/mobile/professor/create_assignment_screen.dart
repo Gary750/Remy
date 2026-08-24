@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:remy/providers/assignment_provider.dart';
+import 'package:remy/utils/ui_feedback.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'package:remy/views/shared/widgets/custom_text_field.dart';
 import 'package:remy/views/shared/widgets/loading_widget.dart';
@@ -281,26 +282,29 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
     print('  - Tipo: $_selectedRecipeType');
     print('  - Fecha límite: $dueDate');
 
-    final success =
-        await Provider.of<AssignmentProvider>(
-          context,
-          listen: false,
-        ).createAssignment(
-          classId: widget.classId,
-          title: _titleController.text.trim(),
-          recipeType: _selectedRecipeType!, // 'Comida', 'Bebida' o 'Ambos'
-          dueDate: dueDate,
-          instructions: _instructionsController.text.trim(),
-        );
+    final assignmentProvider = Provider.of<AssignmentProvider>(
+      context,
+      listen: false,
+    );
 
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Entrega creada exitosamente'),
-          backgroundColor: Colors.green,
-        ),
-      );
+    final success = await assignmentProvider.createAssignment(
+      classId: widget.classId,
+      title: _titleController.text.trim(),
+      recipeType: _selectedRecipeType!, // 'Comida', 'Bebida' o 'Ambos'
+      dueDate: dueDate,
+      instructions: _instructionsController.text.trim(),
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      UIFeedback.showSuccess(context, 'Entrega creada exitosamente.');
       Navigator.pop(context, true);
+    } else {
+      UIFeedback.showError(
+        context,
+        assignmentProvider.error ?? 'Error al crear la entrega.',
+      );
     }
   }
 }

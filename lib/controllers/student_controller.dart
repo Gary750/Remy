@@ -1,4 +1,14 @@
 import 'package:remy/services/supabase_service.dart';
+import 'package:remy/utils/error_handler.dart';
+
+enum JoinClassStatus { success, classNotFound, alreadyEnrolled, error }
+
+class JoinClassResult {
+  final JoinClassStatus status;
+  final String message;
+
+  JoinClassResult({required this.status, required this.message});
+}
 
 class StudentController {
   final SupabaseService _supabase = SupabaseService();
@@ -7,7 +17,7 @@ class StudentController {
   Future<List<Map<String, dynamic>>> getMyClasses() async {
     try {
       final session = _supabase.supabase.auth.currentSession;
-      if (session == null) return [];
+      if (session == null) throw 'No hay sesión activa';
 
       final userId = session.user.id;
 
@@ -41,14 +51,19 @@ class StudentController {
       return List<Map<String, dynamic>>.from(classes);
     } catch (e) {
       print('Error al obtener clases del estudiante: $e');
-      return [];
+      throw ErrorHandler.translate(e);
     }
   }
 
-  Future<bool> joinClass(String code) async {
+  Future<JoinClassResult> joinClass(String code) async {
     try {
       final session = _supabase.supabase.auth.currentSession;
-      if (session == null) return false;
+      if (session == null) {
+        return JoinClassResult(
+          status: JoinClassStatus.error,
+          message: 'No hay sesión activa',
+        );
+      }
 
       final classResponse = await _supabase.supabase
           .from('classes')
@@ -56,7 +71,12 @@ class StudentController {
           .eq('join_code', code.toUpperCase())
           .maybeSingle();
 
-      if (classResponse == null) return false;
+      if (classResponse == null) {
+        return JoinClassResult(
+          status: JoinClassStatus.classNotFound,
+          message: 'No existe ninguna clase con ese código. Verifica e intenta de nuevo.',
+        );
+      }
 
       final classId = classResponse['id'];
 
@@ -67,7 +87,12 @@ class StudentController {
           .eq('student_id', session.user.id)
           .maybeSingle();
 
-      if (existing != null) return false;
+      if (existing != null) {
+        return JoinClassResult(
+          status: JoinClassStatus.alreadyEnrolled,
+          message: 'Ya estás inscrito en esta clase.',
+        );
+      }
 
       await _supabase.supabase.from('enrollments').insert({
         'class_id': classId,
@@ -75,10 +100,16 @@ class StudentController {
         'joined_at': DateTime.now().toIso8601String(),
       });
 
-      return true;
+      return JoinClassResult(
+        status: JoinClassStatus.success,
+        message: 'Te has unido a la clase exitosamente.',
+      );
     } catch (e) {
       print('Error al unirse a clase: $e');
-      return false;
+      return JoinClassResult(
+        status: JoinClassStatus.error,
+        message: ErrorHandler.translate(e),
+      );
     }
   }
 

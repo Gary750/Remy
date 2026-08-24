@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:remy/controllers/student_controller.dart';
+import 'package:remy/utils/error_handler.dart';
+import 'package:remy/utils/ui_feedback.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'package:remy/views/shared/widgets/custom_text_field.dart';
 
@@ -39,31 +41,27 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
     });
 
     try {
-      final success = await _studentController.joinClass(code);
+      final result = await _studentController.joinClass(code);
 
       if (!mounted) return;
 
-      if (success) {
+      if (result.status == JoinClassStatus.success) {
         widget.onJoined();
-        final messenger = ScaffoldMessenger.of(context);
         Navigator.pop(context);
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Te has unido a la clase'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        UIFeedback.showSuccess(context, result.message);
       } else {
         setState(() {
-          _errorMessage = 'Código inválido. Verifica e intenta de nuevo.';
+          _errorMessage = result.message;
           _isLoading = false;
         });
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Error al unirse: $e';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = ErrorHandler.translate(e);
+          _isLoading = false;
+        });
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 // lib/controllers/assignment_controller.dart
 import '../config/supabase_client.dart';
+import '../utils/error_handler.dart';
 
 class AssignmentController {
   /// Datos de una clase por id (usado en la cabecera de student_class_detail).
@@ -9,7 +10,7 @@ class AssignmentController {
           await supabase.from('classes').select().eq('id', classId).single();
       return response;
     } catch (e) {
-      throw 'Error al cargar la clase: $e';
+      throw ErrorHandler.translate(e);
     }
   }
 
@@ -67,7 +68,7 @@ class AssignmentController {
         };
       }).toList();
     } catch (e) {
-      throw 'Error al cargar las entregas: $e';
+      throw ErrorHandler.translate(e);
     }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:remy/models/assignment_model.dart';
 import 'package:remy/services/supabase_service.dart';
+import 'package:remy/utils/error_handler.dart';
 
 class AssignmentProvider extends ChangeNotifier {
   List<AssignmentModel> _assignments = [];
@@ -31,7 +32,7 @@ class AssignmentProvider extends ChangeNotifier {
         orElse: () => null,
       );
     } catch (e) {
-      _error = 'Error al cargar entregas: $e';
+      _error = ErrorHandler.translate(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -68,7 +69,7 @@ class AssignmentProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = 'Error al crear la entrega: $e';
+      _error = ErrorHandler.translate(e);
       print('❌ Error: $e');
       return false;
     } finally {

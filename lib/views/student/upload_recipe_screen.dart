@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:remy/controllers/recipe_controller.dart';
 import 'package:remy/services/storage_service.dart';
+import 'package:remy/utils/ui_feedback.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
 import 'package:remy/views/shared/widgets/custom_text_field.dart';
 
@@ -424,9 +425,7 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al seleccionar la imagen: $e'), backgroundColor: Colors.red),
-      );
+      UIFeedback.showError(context, e, title: 'Error al seleccionar la imagen');
     }
   }
 
@@ -440,11 +439,9 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
         procedureController.text.trim().isEmpty ||
         !hasIngredients ||
         (widget.recipeType == 'Ambos' && selectedType == null)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Completa los campos obligatorios (*) y al menos un ingrediente'),
-          backgroundColor: Colors.red,
-        ),
+      UIFeedback.showWarning(
+        context,
+        'Completa los campos obligatorios (*) y al menos un ingrediente.',
       );
       return;
     }
@@ -487,18 +484,11 @@ class _UploadRecipeScreenState extends State<UploadRecipeScreen> {
       await recipeController.createRecipe(recipe);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Receta publicada exitosamente'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      UIFeedback.showSuccess(context, 'Receta publicada exitosamente.');
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-      );
+      UIFeedback.showError(context, e);
     } finally {
       if (mounted) setState(() => isLoading = false);
     }

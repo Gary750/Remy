@@ -4,6 +4,7 @@ import 'package:remy/models/assignment_model.dart';
 import 'package:remy/providers/assignment_provider.dart';
 import 'package:remy/providers/enrollment_provider.dart';
 import 'package:remy/services/supabase_service.dart';
+import 'package:remy/utils/ui_feedback.dart';
 import 'package:remy/views/mobile/professor/create_assignment_screen.dart';
 import 'package:remy/views/mobile/professor/student_submissions_screen.dart';
 import 'package:remy/views/shared/widgets/loading_widget.dart';
@@ -288,28 +289,15 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
     if (_error != null) {
       return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 60, color: Colors.red.shade300),
-              const SizedBox(height: 16),
-              Text('Error al cargar los datos',
-                  style: TextStyle(color: Colors.grey.shade600)),
-              const SizedBox(height: 8),
-              Text(_error!,
-                  style: TextStyle(
-                      color: Colors.grey.shade500, fontSize: 12),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadData,
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE65100)),
-                child: const Text('Reintentar'),
-              ),
-            ],
-          ),
+        appBar: AppBar(
+          title: Text(widget.className),
+          backgroundColor: const Color(0xFFE65100),
+          foregroundColor: Colors.white,
+        ),
+        body: UIErrorStateWidget(
+          error: _error,
+          title: 'Error al cargar los datos de la clase',
+          onRetry: _loadData,
         ),
       );
     }

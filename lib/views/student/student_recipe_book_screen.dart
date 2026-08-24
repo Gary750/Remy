@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:remy/controllers/recipe_controller.dart';
+import 'package:remy/utils/ui_feedback.dart';
 import 'package:remy/views/shared/responsive_layout.dart';
 
 class StudentRecipeBookScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class _StudentRecipeBookScreenState extends State<StudentRecipeBookScreen> {
   Timer? _debounce;
 
   bool _isLoading = true;
+  String? _error;
   List<Map<String, dynamic>> _allRecipes = [];
   List<Map<String, dynamic>> _filteredRecipes = [];
 
@@ -54,7 +56,10 @@ class _StudentRecipeBookScreenState extends State<StudentRecipeBookScreen> {
   }
 
   Future<void> _loadRecipes() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
       final data = await _recipeController.getMyRecipes();
       if (mounted) {
@@ -63,14 +68,15 @@ class _StudentRecipeBookScreenState extends State<StudentRecipeBookScreen> {
           _extractFilterOptions();
           _applyFilters();
           _isLoading = false;
+          _error = null;
         });
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-      );
+      setState(() {
+        _isLoading = false;
+        _error = e.toString();
+      });
     }
   }
 
@@ -144,6 +150,18 @@ class _StudentRecipeBookScreenState extends State<StudentRecipeBookScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return UIErrorStateWidget(
+        error: _error,
+        title: 'Error al cargar tu recetario',
+        onRetry: _loadRecipes,
+      );
+    }
+
     if (_selectedRecipeId != null) {
       final recipe = _allRecipes.firstWhere(
         (r) => r['id'] == _selectedRecipeId,

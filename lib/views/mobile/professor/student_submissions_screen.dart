@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:remy/models/assignment_model.dart';
 import 'package:remy/services/supabase_service.dart';
+import 'package:remy/utils/ui_feedback.dart';
 import 'package:remy/views/mobile/professor/student_recipe_screen.dart';
 import 'package:remy/views/shared/widgets/loading_widget.dart';
 
@@ -164,21 +165,18 @@ class _StudentSubmissionsScreenState
         'allowed_at': DateTime.now().toUtc().toIso8601String(),
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Se otorgó prórroga a ${widget.studentName}.'),
-            backgroundColor: Colors.green,
-          ),
+        UIFeedback.showSuccess(
+          context,
+          'Se otorgó prórroga a ${widget.studentName}.',
         );
         _loadData();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al otorgar prórroga: $e'),
-            backgroundColor: Colors.red,
-          ),
+        UIFeedback.showError(
+          context,
+          e,
+          title: 'Error al otorgar prórroga',
         );
       }
     }
@@ -758,28 +756,10 @@ class _StudentSubmissionsScreenState
   }
 
   Widget _buildError() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 60, color: Colors.red.shade300),
-          const SizedBox(height: 16),
-          Text('Error al cargar el historial',
-              style: TextStyle(color: Colors.grey.shade600)),
-          const SizedBox(height: 8),
-          Text(_error!,
-              style:
-                  TextStyle(color: Colors.grey.shade500, fontSize: 12),
-              textAlign: TextAlign.center),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _loadData,
-            style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE65100)),
-            child: const Text('Reintentar'),
-          ),
-        ],
-      ),
+    return UIErrorStateWidget(
+      error: _error,
+      title: 'Error al cargar el historial',
+      onRetry: _loadData,
     );
   }
 }

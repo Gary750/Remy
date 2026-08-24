@@ -8,6 +8,7 @@ import 'package:remy/services/supabase_service.dart';
 
 // ==================== PANTALLAS DE AUTENTICACIÓN ====================
 import 'package:remy/views/auth/login_screen.dart';
+
 import 'package:remy/views/auth/register_screen.dart';
 
 // ==================== PANTALLAS DE PROFESOR ====================

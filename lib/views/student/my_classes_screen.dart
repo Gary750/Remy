@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:remy/controllers/student_controller.dart';
 import 'package:remy/config/app_routes.dart';
 import 'package:remy/models/class_model.dart';
+import 'package:remy/utils/ui_feedback.dart';
 import 'package:remy/views/shared/responsive_layout.dart';
 import 'package:remy/views/shared/widgets/class_card.dart';
 import 'package:remy/views/shared/widgets/custom_button.dart';
@@ -18,6 +19,7 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> {
   final StudentController studentController = StudentController();
 
   bool isLoading = true;
+  String? _error;
   List<Map<String, dynamic>> classes = [];
 
   @override
@@ -27,15 +29,21 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> {
   }
 
   Future<void> _loadClasses() async {
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      _error = null;
+    });
     try {
       final data = await studentController.getMyClasses();
-      if (mounted) setState(() => classes = data);
+      if (mounted) {
+        setState(() {
+          classes = data;
+          _error = null;
+        });
+      }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-      );
+      setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -56,6 +64,14 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return UIErrorStateWidget(
+        error: _error,
+        title: 'Error al cargar tus clases',
+        onRetry: _loadClasses,
+      );
     }
 
     return ResponsiveLayout(

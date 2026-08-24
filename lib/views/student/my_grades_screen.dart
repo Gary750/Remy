@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:remy/controllers/student_controller.dart';
+import 'package:remy/utils/ui_feedback.dart';
 
 class MyGradesScreen extends StatefulWidget {
   const MyGradesScreen({super.key});
@@ -11,6 +12,7 @@ class MyGradesScreen extends StatefulWidget {
 class _MyGradesScreenState extends State<MyGradesScreen> {
   final StudentController studentController = StudentController();
   bool isLoading = true;
+  String? _error;
   List<Map<String, dynamic>> grades = [];
 
   @override
@@ -20,15 +22,21 @@ class _MyGradesScreenState extends State<MyGradesScreen> {
   }
 
   Future<void> _loadGrades() async {
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      _error = null;
+    });
     try {
       final data = await studentController.getMyGrades();
-      if (mounted) setState(() => grades = data);
+      if (mounted) {
+        setState(() {
+          grades = data;
+          _error = null;
+        });
+      }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-      );
+      setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -45,9 +53,15 @@ class _MyGradesScreenState extends State<MyGradesScreen> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : grades.isEmpty
-              ? _buildEmptyState()
-              : _buildGradesList(),
+          : _error != null
+              ? UIErrorStateWidget(
+                  error: _error,
+                  title: 'Error al cargar calificaciones',
+                  onRetry: _loadGrades,
+                )
+              : grades.isEmpty
+                  ? _buildEmptyState()
+                  : _buildGradesList(),
     );
   }
 

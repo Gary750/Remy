@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:remy/services/supabase_service.dart';
+import 'package:remy/utils/ui_feedback.dart';
 import 'package:remy/views/shared/widgets/loading_widget.dart';
 
 class StudentRecipeScreen extends StatefulWidget {
@@ -158,12 +159,7 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
       if (!mounted) return;
 
       if (existingGrade != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Este recetario ya está calificado'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        UIFeedback.showWarning(context, 'Esta entrega ya cuenta con una calificación.');
         setState(() {
           _isLoading = false;
         });
@@ -188,11 +184,9 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Calificación de ${rating.toStringAsFixed(0)} estrellas guardada'),
-          backgroundColor: Colors.green,
-        ),
+      UIFeedback.showSuccess(
+        context,
+        'Calificación de ${rating.toStringAsFixed(0)} estrellas guardada.',
       );
 
     } catch (e) {
@@ -200,12 +194,7 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al calificar: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      UIFeedback.showError(context, e, title: 'Error al calificar');
     }
   }
 
@@ -276,32 +265,11 @@ class _StudentRecipeScreenState extends State<StudentRecipeScreen> {
 
     if (_error != null) {
       return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 60, color: Colors.red.shade300),
-              const SizedBox(height: 16),
-              Text(
-                'Error al cargar recetas',
-                style: TextStyle(color: Colors.grey.shade600),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _error!,
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadRecipes,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE65100),
-                ),
-                child: const Text('Reintentar'),
-              ),
-            ],
-          ),
+        appBar: AppBar(title: const Text('Receta de Alumno')),
+        body: UIErrorStateWidget(
+          error: _error,
+          title: 'Error al cargar la receta',
+          onRetry: _loadRecipes,
         ),
       );
     }

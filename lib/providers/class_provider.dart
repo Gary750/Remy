@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:remy/models/class_model.dart';
 import 'package:remy/services/supabase_service.dart';
+import 'package:remy/utils/error_handler.dart';
 
 class ClassProvider extends ChangeNotifier {
   List<ClassModel> _classes = [];
@@ -34,7 +35,7 @@ class ClassProvider extends ChangeNotifier {
       }
       
     } catch (e) {
-      _error = 'Error al cargar clases: $e';
+      _error = ErrorHandler.translate(e);
       print('❌ $_error');
     } finally {
       _isLoading = false;
@@ -85,7 +86,7 @@ class ClassProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = 'Error al crear la clase: $e';
+      _error = ErrorHandler.translate(e);
       return false;
     } finally {
       _isLoading = false;

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:remy/controllers/recipe_controller.dart';
+import 'package:remy/utils/ui_feedback.dart';
 import 'package:remy/views/shared/responsive_layout.dart';
 import 'package:remy/views/shared/widgets/custom_text_field.dart';
 
@@ -76,9 +77,7 @@ class _SearchRecipesScreenState extends State<SearchRecipesScreen> {
       if (mounted) setState(() => results = data);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-      );
+      UIFeedback.showError(context, e);
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
